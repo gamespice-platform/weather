@@ -1,10 +1,19 @@
 # dot-weather
 
-This is the **weather** asset for TMC's **Dot** collection. It is the family's everyday-weather layer: snow, rain, thunderstorms, wind and fog, described per map as a document, so any game gets them by adding a node. The intense events stay in `natural-disasters`.
+Everyday weather for Godot games: snow, rain, thunderstorms, wind and fog, described per map as a document, so any game gets them by adding a node.
 
-This collection of assets provides modular building blocks for creating games and applications within the TMC ecosystem, ensuring consistency and interoperability across all `dot-*` assets. These assets are open source under the MIT license.
+## Install
 
-**Please treat this as partially tested.** The headless suite passes, and the demo has been rendered under a software renderer and looked at, but nothing here has been in front of players yet.
+1. Get [Godot 4.7](https://godotengine.org/download).
+2. Either use [dot-bootstrap](https://github.com/modcommunity/dot-bootstrap), which clones every project and links the addons, or copy `addons/dot_weather/` and [dot-core](https://github.com/modcommunity/dot-core)'s `addons/dot_core/` into your project and enable dot-weather in *Project > Project Settings > Plugins*.
+
+| Addon | Needed? | What it adds |
+| --- | --- | --- |
+| dot-core | Required | Config and results. |
+| [dot-fx](https://github.com/modcommunity/dot-fx) (API level 5 or newer) | Optional | Draws the precipitation, volumes included. |
+| [dot-lighting](https://github.com/modcommunity/dot-lighting) (API level 6 or newer) | Optional | Writes the fog onto the world's environment. |
+
+A dedicated server with neither still parses documents, runs the lightning schedule and emits the signals.
 
 ## Use
 
@@ -12,7 +21,7 @@ This collection of assets provides modular building blocks for creating games an
 var weather := DotWeather.new()
 add_child(weather)
 var res := weather.apply(map_document["weather"])      # a DotResult; a bad document is refused and names the key
-weather.lightning.connect(func(strike, level): ...)     # a game may add a sound, a light, a shake
+weather.lightning.connect(func(strike, level): ...)     # add a sound, a light, a shake
 weather.thunder.connect(func(sound, strike, metres, loudness): audio.play(sound, loudness))
 weather.ambience_changed.connect(func(ids): ...)        # {"loop": id, "wind": id}: start your own loops
 
@@ -35,27 +44,25 @@ A document (every section optional, unknown keys refused, distances in metres):
 }
 ```
 
-## What it needs
+## Lightning without network traffic
 
-- **dot-core**: required.
-- **dot-fx** (API level 5 or newer): optional; draws the precipitation, volumes included.
-- **dot-lighting** (API level 6 or newer): optional; writes the fog onto the world's existing environment.
-
-A dedicated server with neither still parses documents, runs the lightning schedule and emits the signals.
-
-## Lightning without a packet
-
-The strikes are a pure function of the document's seed and the shared match time you pass to `advance()`, so every client agrees on when and where, a late joiner sees the same storm, and a replay can seek. Thunder arrives later by distance, per listener. [docs/design.md](docs/design.md#lightning-in-sync-without-networking) says why.
+Strikes are a pure function of the document's seed and the shared match time you pass to `advance()`. Every client agrees on when and where, a late joiner sees the same storm, and a replay can seek. Thunder arrives later by distance, per listener. See [docs/design.md](docs/design.md#lightning-in-sync-without-networking).
 
 ## Accessibility
 
-Flashes can be turned off or scaled to zero (`DotWeatherConfig.allow_flashes`, `flash_scale`), and the fastest storm a document may describe never flashes more than three times in a second.
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `DotWeatherConfig.allow_flashes` | true | Turn lightning flashes off. |
+| `DotWeatherConfig.flash_scale` | 1.0 | Scale flash brightness, down to 0. |
+
+To keep to the guidance of no more than three general flashes per second, a document with a `mean_interval` under 3 seconds is refused. This is a deliberate safety floor.
 
 ## Try it
 
-```bash
-godot --path . res://examples/weather_demo.tscn -- --mode rain      # snow, rain, fog, flash; keys 1 to 4
-godot --headless --path . res://examples/weather_selftest.tscn
-```
+Run `examples/weather_demo.tscn` (add `-- --mode rain`; keys 1 to 4 switch snow, rain, fog and flash) to see it, and `examples/weather_selftest.tscn` headless with Godot for the tests.
 
-Screenshots from the demo under xvfb are in `screenshots/`.
+## Status and licence
+
+Part of the TMC **dot-\*** family of Godot addons. Written with Claude Code and maintained by `gamemann`. Every addon has headless tests, but little of this has been played by real users yet, so expect rough edges and please [open an issue](https://github.com/modcommunity/dot-weather/issues) when you hit one.
+
+MIT licence, see [LICENSE](LICENSE). The only closed part of the TMC platform is the web back end; you can use your own instead of TMC's.
