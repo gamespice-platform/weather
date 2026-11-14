@@ -124,11 +124,15 @@ func apply(data: Variant) -> DotResult:
 	if data is DotWeatherDoc:
 		parsed = data
 	elif data is Dictionary:
-		var res := DotWeatherDoc.parse(data)
+		var floor_s: float = config.min_thunder_interval if config != null else DotWeatherDoc.MIN_INTERVAL
+		var res := DotWeatherDoc.parse(data, floor_s)
 		if not res.ok:
 			DotLog.warn(CHANNEL, "weather document refused", {"why": res.error.message})
 			return res
 		parsed = res.value
+		if parsed.has_thunder and parsed.thunder_interval < DotWeatherDoc.MIN_INTERVAL:
+			DotLog.warn(CHANNEL, "thunder faster than the photosensitivity floor (min_thunder_interval lowered)",
+				{"mean_interval": parsed.thunder_interval, "default_floor": DotWeatherDoc.MIN_INTERVAL})
 	else:
 		return DotResult.fail(DotError.CODE_INVALID, "weather: apply() takes a Dictionary or a DotWeatherDoc")
 	setup(parsed)

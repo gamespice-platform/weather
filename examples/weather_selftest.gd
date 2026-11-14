@@ -17,7 +17,7 @@ extends Node
 
 const SECTIONS := 11
 ## Checks that always run.
-const CHECKS_BASE := 118
+const CHECKS_BASE := 124
 ## Extra checks when dot-fx is installed, and when dot-lighting is.
 const CHECKS_FX := 4
 const CHECKS_LIGHTING := 2
@@ -147,7 +147,7 @@ func _test_document() -> void:
 		["an inside-out volume", {"precipitation": {"kind": "snow", "volumes": [{"min": [1, 1, 1], "max": [0, 0, 0]}]}}],
 		["a fog end before its start", {"fog": {"start": 50, "end": 10}}],
 		["a wind vector of two numbers", {"wind": {"vector": [1, 2]}}],
-		["a storm faster than the safe flash rate", {"thunder": {"mean_interval": 1.0}}],
+		["a storm faster than the default safe flash rate", {"thunder": {"mean_interval": 1.0}}],
 		["a minimum distance beyond the maximum", {"thunder": {"min_distance": 500, "max_distance": 100}}],
 		["a non-integer seed", {"seed": 1.5}],
 		["a string where a number belongs", {"fog": {"end": "far"}}],
@@ -155,6 +155,19 @@ func _test_document() -> void:
 	]
 	for b in bad:
 		_check(not DotWeatherDoc.parse(b[1]).ok, "refused: %s" % b[0])
+
+	# The 3 s floor is a default an operator can lower, not a limit.
+	var quick := {"thunder": {"mean_interval": 1.0}}
+	var low := DotWeatherDoc.parse(quick, 0.5)
+	_check(low.ok and is_equal_approx(low.value.thunder_interval, 1.0), "a lowered floor accepts a 1 s storm")
+	var none := DotWeatherDoc.parse({"thunder": {"mean_interval": 0.2}}, 0.0)
+	_check(none.ok, "a floor of 0 accepts any positive interval")
+	_check(not DotWeatherDoc.parse({"thunder": {"mean_interval": 0}}, 0.0).ok, "a floor of 0 still refuses a zero interval")
+	_check(not DotWeatherDoc.parse(quick, -1.0).ok, "a negative floor is refused")
+	_check(DotWeatherDoc.parse({"thunder": {"mean_interval": 86400}}).ok, "there is no upper limit on the interval")
+	var cfg := DotWeatherConfig.new()
+	cfg.min_thunder_interval = -1.0
+	_check(not cfg.validate().ok and is_equal_approx(DotWeatherConfig.new().min_thunder_interval, 3.0), "the config defaults to 3 s and refuses a negative floor")
 
 
 # --- 2 ------------------------------------------------------------------------

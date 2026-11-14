@@ -34,7 +34,7 @@ What the node does about time: the first `advance` only records it (a late joine
 
 ## The flash rate is guaranteed by construction
 
-Lightning is a full-screen brightness change, and the accepted guidance is no more than three general flashes in any one second. The document refuses `mean_interval` under 3 s, and the middle-half placement means consecutive strikes are at least half an interval apart (1.5 s), each with a double flicker 0.14 s after the first. The suite samples the fastest storm over five minutes and counts rising edges in every second. On top of that `DotWeatherConfig.allow_flashes` and `flash_scale` are player settings that reach zero; the `lightning` signal still fires so a game can keep its own feedback.
+Lightning is a full-screen brightness change, and the accepted guidance is no more than three general flashes in any one second. By default the document refuses `mean_interval` under 3 s (`DotWeatherConfig.min_thunder_interval`; an operator may lower it, and a faster storm is then logged as a warning, so the guarantee below holds only at the default floor), and the middle-half placement means consecutive strikes are at least half an interval apart (1.5 s), each with a double flicker 0.14 s after the first. The suite samples the fastest storm over five minutes and counts rising edges in every second. On top of that `DotWeatherConfig.allow_flashes` and `flash_scale` are player settings that reach zero; the `lightning` signal still fires so a game can keep its own feedback.
 
 ## Optional addons, by path and level
 

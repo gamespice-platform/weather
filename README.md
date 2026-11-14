@@ -54,8 +54,9 @@ Strikes are a pure function of the document's seed and the shared match time you
 | --- | --- | --- |
 | `DotWeatherConfig.allow_flashes` | true | Turn lightning flashes off. |
 | `DotWeatherConfig.flash_scale` | 1.0 | Scale flash brightness, down to 0. |
+| `DotWeatherConfig.min_thunder_interval` | 3.0 | Shortest thunder `mean_interval` a document may ask for. Default 3 s, any value; 0 is no floor. Negative is refused. |
 
-To keep to the guidance of no more than three general flashes per second, a document with a `mean_interval` under 3 seconds is refused. This is a deliberate safety floor.
+To keep to the guidance of no more than three general flashes per second, by default a document with a `mean_interval` under 3 seconds is refused. That is an accessibility default, not a limit: an operator who lowers `min_thunder_interval` gets the faster storm, with a warning logged each time one is applied. There is no upper limit on the interval.
 
 ## Try it
 

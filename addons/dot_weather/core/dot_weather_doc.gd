@@ -21,7 +21,7 @@ extends RefCounted
 ##   "fog": {"colour": [0.5, 0.55, 0.62], "start": 8, "end": 120, "max_density": 0.9},   # metres
 ##   "wind": {"vector": [3, 0, 1], "gust": 0.8, "gust_period": 9},
 ##   "thunder": {
-##     "mean_interval": 14,                 # seconds, 3 or more
+##     "mean_interval": 14,                 # seconds; 3 or more unless the floor is lowered
 ##     "chance": 0.8,                       # of a strike in each interval
 ##     "centre": [0, 0, 0], "min_distance": 80, "max_distance": 900, "height": 220,
 ##     "flash": {"sky": 1.6, "ambient": 0.8, "duration": 0.45},
@@ -45,9 +45,11 @@ const RAIN := &"rain"
 ## The most precipitation volumes one document may carry. Same ceiling as dot-fx.
 const MAX_VOLUMES := 256
 
-## The shortest mean interval between strikes. With the schedule's placement inside each interval
-## (see [DotWeatherSchedule]) two strikes are never closer than half of this, so a flash never
-## repeats faster than the three a second the accessibility guidance allows, double flicker included.
+## The default shortest mean interval between strikes. With the schedule's placement inside each
+## interval (see [DotWeatherSchedule]) two strikes are never closer than half of this, so a flash
+## never repeats faster than the three a second the accessibility guidance allows, double flicker
+## included. It is a default, not a limit: [method parse] takes another floor, and
+## [member DotWeatherConfig.min_thunder_interval] is where an operator sets one (0 is no floor).
 const MIN_INTERVAL := 3.0
 
 const _TOP := ["seed", "precipitation", "fog", "wind", "thunder", "ambience"]
@@ -107,7 +109,12 @@ var _stream: DotRandomStream = null
 
 
 ## A document from a dictionary, or a failure naming the key. Succeeds with a [DotWeatherDoc].
-static func parse(data: Dictionary) -> DotResult:
+## [param min_interval] is the shortest [code]mean_interval[/code] accepted (default
+## [constant MIN_INTERVAL], the accessibility floor); 0 accepts any positive interval. A negative
+## floor is refused.
+static func parse(data: Dictionary, min_interval: float = MIN_INTERVAL) -> DotResult:
+	if not is_finite(min_interval) or min_interval < 0.0:
+		return _fail("weather: the minimum thunder interval must be 0 or more (got %s)" % min_interval)
 	var bad := _unknown(data, _TOP, "weather")
 	if bad != "":
 		return _fail(bad)
@@ -132,7 +139,7 @@ static func parse(data: Dictionary) -> DotResult:
 		if not r.ok:
 			return r
 	if data.has("thunder"):
-		var r := d._parse_thunder(data["thunder"])
+		var r := d._parse_thunder(data["thunder"], min_interval)
 		if not r.ok:
 			return r
 	if data.has("ambience"):
@@ -294,16 +301,18 @@ func _parse_wind(v: Variant) -> DotResult:
 	return DotResult.success(null)
 
 
-func _parse_thunder(v: Variant) -> DotResult:
+func _parse_thunder(v: Variant, min_interval: float) -> DotResult:
 	if not (v is Dictionary):
 		return _fail("weather: 'thunder' must be an object")
 	var sec: Dictionary = v
 	var bad := _unknown(sec, _THUNDER, "weather.thunder")
 	if bad != "":
 		return _fail(bad)
-	var iv: Variant = _num(sec.get("mean_interval", 15.0), MIN_INTERVAL, 3600.0)
-	if iv == null:
-		return _fail("weather.thunder: 'mean_interval' must be %.0f to 3600 seconds (a faster storm would flash faster than is safe to watch)" % MIN_INTERVAL)
+	var iv: Variant = _num(sec.get("mean_interval", 15.0), min_interval, INF)
+	if iv == null or float(iv) <= 0.0:
+		if min_interval > 0.0:
+			return _fail("weather.thunder: 'mean_interval' must be %s seconds or more (a faster storm flashes faster than is safe to watch; DotWeatherConfig.min_thunder_interval lowers this floor)" % min_interval)
+		return _fail("weather.thunder: 'mean_interval' must be more than 0 seconds")
 	var ch: Variant = _num(sec.get("chance", 0.8), 0.01, 1.0)
 	if ch == null:
 		return _fail("weather.thunder: 'chance' must be 0.01 to 1")
