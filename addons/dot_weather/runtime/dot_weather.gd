@@ -16,7 +16,7 @@ extends Node3D
 ##
 ## [b]Precipitation is dot-fx's, fog is dot-lighting's, and both are optional.[/b] When dot-fx is
 ## in the build the precipitation section is handed to its weather node (volumes and all); when
-## dot-lighting is in the build the fog is written onto the world's existing [Environment] by
+## GameSpice Lighting is in the build the fog is written onto the world's existing [Environment] by
 ## the same code that writes a map's lighting, never a second [WorldEnvironment]. Neither is
 ## named in this file, so a headless server with neither still parses documents, runs the
 ## schedule, answers [method wind] and emits [signal lightning] and [signal thunder]. The
@@ -27,14 +27,14 @@ extends Node3D
 ## [param match_time] (the default) and the node counts its own clock from zero, which is right
 ## for a single-player game and wrong for anything that must agree.
 ##
-## [b]Nothing runs in [code]_process[/code][/b]: the game calls [method advance], as with dot-fx.
+## [b]Nothing runs in [code]_process[/code][/b]: the game calls [method advance], as with GameSpice FX.
 
 const CHANNEL := "weather"
 
 ## OFF draws nothing (no precipitation, flash or bolt) but the schedule, wind and signals run.
 enum Quality { OFF, LOW, HIGH }
 
-## Fog is applied from this alone when dot-lighting is absent; the path of the optional rig.
+## Fog is applied from this alone when GameSpice Lighting is absent; the path of the optional rig.
 const _FX_SCRIPT := "res://addons/dot_fx/runtime/dot_fx_weather.gd"
 const _LIGHT_RIG := "res://addons/dot_lighting/runtime/dot_light_rig.gd"
 const _LIGHT_DOC := "res://addons/dot_lighting/core/dot_light_document.gd"
@@ -53,7 +53,7 @@ signal lightning(strike: Dictionary, level: float)
 
 ## Emitted when a strike's thunder reaches the camera: flash time plus distance over the speed of
 ## sound. [param sound] is one of the document's thunder ids ([code]&""[/code] if none),
-## [param loudness] is 0.2 to 1 by distance. The game plays it through dot-audio.
+## [param loudness] is 0.2 to 1 by distance. The game plays it through GameSpice Audio.
 signal thunder(sound: StringName, strike: Dictionary, metres: float, loudness: float)
 
 ## Emitted when a document is applied or cleared: [code]{"loop": id, "wind": id}[/code] (empty
@@ -97,12 +97,12 @@ var _bolt: MeshInstance3D = null
 var _bolt_slot: int = -1
 
 
-## Whether dot-fx is in this build at a level that has the weather node.
+## Whether GameSpice FX is in this build at a level that has the weather node.
 static func fx_available() -> bool:
 	return DotAddonApi.build_level("dot_fx") >= FX_LEVEL
 
 
-## Whether dot-lighting is in this build at a level that can write fog onto an environment.
+## Whether GameSpice Lighting is in this build at a level that can write fog onto an environment.
 static func lighting_available() -> bool:
 	return DotAddonApi.build_level("dot_lighting") >= LIGHTING_LEVEL
 
@@ -190,7 +190,7 @@ func wind() -> Vector3:
 	return _wind
 
 
-## What gusts add to the document's steady wind right now (horizontal): the lean dot-fx's [code]set_gust[/code] gets.
+## What gusts add to the document's steady wind right now (horizontal): the lean GameSpice FX's [code]set_gust[/code] gets.
 func gust() -> Vector3:
 	if doc == null:
 		return Vector3.ZERO
@@ -245,7 +245,7 @@ func _build_fx() -> void:
 func _sync_fx(delta: float, camera_pos: Vector3) -> void:
 	if _fx == null:
 		return
-	# dot-fx marks itself dirty on every set, so only touch it when something changed.
+	# GameSpice FX marks itself dirty on every set, so only touch it when something changed.
 	if config.quality != _fx_quality:
 		_fx_quality = config.quality
 		_fx.set("quality", config.quality)

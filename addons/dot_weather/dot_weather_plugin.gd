@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-## Editor entry point for dot-weather. Registers the node type only.
+## Editor entry point for GameSpice Weather. Registers the node type only.
 ##
 ## No autoloads: a client drawing weather and a server that only runs its schedule are two
 ## nodes in one process, and a global would make them one.

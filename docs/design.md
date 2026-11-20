@@ -13,7 +13,7 @@ One dictionary, every section optional, unknown keys refused at every level (see
 | Section | Becomes |
 | --- | --- |
 | `precipitation` | handed to dot-fx's `DotFxWeather` (volumes and all), with the steady wind folded in |
-| `fog` | written onto the world's `Environment` through dot-lighting |
+| `fog` | written onto the world's `Environment` through GameSpice Lighting |
 | `wind` | `DotWeather.wind()` and `DotWeatherSchedule.wind_at()`: a vector plus gusts, for other systems to read |
 | `thunder` | the lightning schedule, the flash, an optional bolt, and thunder delayed by distance |
 | `ambience` | sound ids, emitted as signals, never played |
@@ -24,9 +24,9 @@ The precipitation section is validated by this addon's own parser, which repeats
 
 The obvious design is a server that decides "lightning now" and tells everyone. It costs a message per strike, arrives at a different moment for each client, is simply lost for a client that joins mid-storm, and cannot be scrubbed in a replay or by a spectator.
 
-Here nothing is sent. The strikes are a **pure function of the document's seed and a time every client already shares**, which a game feeds into `advance(delta, camera, match_time)` (the server tick over the tick rate, or dot-match's elapsed time). Each client works out for itself that there is a strike at 41.37 s, 312 m north-east of the centre. Two clients that agree on the time agree on the storm; a late joiner sees the same storm from its first frame; a replay seek is a different `t`.
+Here nothing is sent. The strikes are a **pure function of the document's seed and a time every client already shares**, which a game feeds into `advance(delta, camera, match_time)` (the server tick over the tick rate, or GameSpice Match's elapsed time). Each client works out for itself that there is a strike at 41.37 s, 312 m north-east of the centre. Two clients that agree on the time agree on the storm; a late joiner sees the same storm from its first frame; a replay seek is a different `t`.
 
-How it stays a function: time is cut into slots of `mean_interval` seconds. Slot `n` holds at most one strike, present with probability `chance`, placed 25% to 75% of the way through its slot, at an angle and distance from the document's centre. Every draw is an indexed draw of dot-core's `DotRandomStream` (`unit_at(index)`), which advances nothing, so asking about slot 9000 first changes nothing about slot 0. A countdown scheduler ("wait a random time, strike, repeat") cannot be asked about the middle of a match without simulating the start, and it has the family's latch failure: one missed tick and it never fires again. A slot has no state to lose.
+How it stays a function: time is cut into slots of `mean_interval` seconds. Slot `n` holds at most one strike, present with probability `chance`, placed 25% to 75% of the way through its slot, at an angle and distance from the document's centre. Every draw is an indexed draw of GameSpice Core's `DotRandomStream` (`unit_at(index)`), which advances nothing, so asking about slot 9000 first changes nothing about slot 0. A countdown scheduler ("wait a random time, strike, repeat") cannot be asked about the middle of a match without simulating the start, and it has the family's latch failure: one missed tick and it never fires again. A slot has no state to lose.
 
 The strike has a place in the world, not on the screen, so the same strike is seen from where each player stands. The flash is the same moment for everyone and dims with distance. **Thunder is the flash time plus distance over the speed of sound, per listener**: the player at the strike hears it at once, the one 600 m away two seconds later. `thunders_between(listener, t0, t1)` looks back far enough to find the strikes whose flash was earlier than the window.
 
@@ -44,7 +44,7 @@ Without dot-fx the precipitation is kept in the document and not drawn. Without 
 
 ## Fog belongs to the lighting
 
-There is exactly one `WorldEnvironment` in a world and it is the lighting's. Weather therefore never builds one: it writes onto the `Environment` it finds (`environment_ref`, else the viewport's) through `DotLightRig.apply_fog(env, doc, metres_per_unit)`, the same function that writes a map's own fog (added for this, dot-lighting API level 6, and `environment()` now calls it). That keeps one opinion on what the numbers mean: the fog's own maximum density rather than 1.0, the sky left unfogged, depth rather than volumetric.
+There is exactly one `WorldEnvironment` in a world and it is the lighting's. Weather therefore never builds one: it writes onto the `Environment` it finds (`environment_ref`, else the viewport's) through `DotLightRig.apply_fog(env, doc, metres_per_unit)`, the same function that writes a map's own fog (added for this, GameSpice Lighting API level 6, and `environment()` now calls it). That keeps one opinion on what the numbers mean: the fog's own maximum density rather than 1.0, the sky left unfogged, depth rather than volumetric.
 
 The map's own fog fields are snapshotted before weather writes and put back by `clear()` or by replacing the document, so weather is something a map has for a while, not a one-way edit. With no environment anywhere the fog waits (and says so in `describe()`); it never creates one.
 
@@ -56,7 +56,7 @@ A flash adds `level * flash_sky` to `background_energy_multiplier` and `level * 
 
 ## Nothing in `_process`
 
-As with dot-fx: the game calls `advance()`. The node has no `_process`, so a server that wants only the schedule calls it at its own rate and a client calls it from its camera code.
+As with GameSpice FX: the game calls `advance()`. The node has no `_process`, so a server that wants only the schedule calls it at its own rate and a client calls it from its camera code.
 
 ## Adopting it in a game with its own weather
 
@@ -67,7 +67,7 @@ A game that already decides its weather per zone (rain, snow, storm, wind, as a 
 3. When the sky changes call `clear()` for an empty document and `apply(doc)` otherwise. Do not apply every frame.
 4. Call `advance(delta, camera.global_position)` once a frame from the camera code, so the drops follow the player rather than the mountain.
 5. Keep grip, damage and pay in the game: a slippery road is `weather["sky"] == RAIN` in the simulation, drops are only the picture of it. If the picture and the number disagree the player will not forgive either.
-6. Sound, spray under the wheels and wet-road looks are the game's (dot-audio, dot-vehicle's `DotVehicleSpray`); the document carries the sound ids if the game wants to read them.
+6. Sound, spray under the wheels and wet-road looks are the game's (GameSpice Audio, GameSpice Vehicle's `DotVehicleSpray`); the document carries the sound ids if the game wants to read them.
 
 A second game with a zone draw does the same; if two want a transition between skies, add the `blend` field here rather than a game-side crossfade.
 
@@ -76,6 +76,6 @@ A second game with a zone draw does the same; if two want a transition between s
 - **Simulation.** No grip, no damage, no wind force on bodies. `wind()` and the signals are the interface.
 - **Sound.** Ids out, a game plays them through dot-audio. The loop's fade near a precipitation volume is `ambience_inside_changed`.
 - **Networking of any kind.** That is the point.
-- **Gusts in the particles.** dot-fx takes one steady wind. If it grows a per-frame wind uniform this node can feed `wind()` into it.
+- **Gusts in the particles.** GameSpice FX takes one steady wind. If it grows a per-frame wind uniform this node can feed `wind()` into it.
 - **Transitions between weathers** (clear to storm over a minute). A game that wants one applies a sequence of documents or, better, asks for a `blend` field here when two games need it.
 - **Dynamic lights.** The flash is ambient and sky, not a light at the bolt; no consumer has asked.

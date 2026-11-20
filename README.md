@@ -5,13 +5,13 @@ Everyday weather for Godot games: snow, rain, thunderstorms, wind and fog, descr
 ## Install
 
 1. Get [Godot 4.7](https://godotengine.org/download).
-2. Either use [dot-bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_weather/` and [dot-core](https://github.com/gamespice-platform/core)'s `addons/dot_core/` into your project and enable dot-weather in *Project > Project Settings > Plugins*.
+2. Either use [GameSpice Bootstrap](https://github.com/gamespice-platform/bootstrap), which clones every project and links the addons, or copy `addons/dot_weather/` and [GameSpice Core](https://github.com/gamespice-platform/core)'s `addons/dot_core/` into your project and enable dot-weather in *Project > Project Settings > Plugins*.
 
 | Addon | Needed? | What it adds |
 | --- | --- | --- |
-| dot-core | Required | Config and results. |
-| [dot-fx](https://github.com/gamespice-platform/fx) (API level 5 or newer) | Optional | Draws the precipitation, volumes included. |
-| [dot-lighting](https://github.com/gamespice-platform/lighting) (API level 6 or newer) | Optional | Writes the fog onto the world's environment. |
+| GameSpice Core | Required | Config and results. |
+| [GameSpice FX](https://github.com/gamespice-platform/fx) (API level 5 or newer) | Optional | Draws the precipitation, volumes included. |
+| [GameSpice Lighting](https://github.com/gamespice-platform/lighting) (API level 6 or newer) | Optional | Writes the fog onto the world's environment. |
 
 A dedicated server with neither still parses documents, runs the lightning schedule and emits the signals.
 

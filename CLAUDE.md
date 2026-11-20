@@ -1,10 +1,10 @@
-# dot-weather
+# GameSpice Weather
 
 The family's everyday-weather layer: snow, rain, thunderstorms, wind and fog, described per map as a document, so any game gets them by adding a node. Intense events (a tornado, a flood) stay in [natural-disasters](../natural-disasters), which may later build on this.
 
 Read the family [CLAUDE.md](../../CLAUDE.md) first.
 
-**The distributable is `addons/dot_weather/`.** It requires [dot-core](../dot-core) and nothing else. [dot-fx](../dot-fx) (draws the precipitation) and [dot-lighting](../dot-lighting) (writes the fog) are **optional**: a build with neither still parses documents, runs the lightning schedule, answers `wind()` and emits `lightning` and `thunder`. For local development link all three, gitignored (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, and the same for `dot_fx` and `dot_lighting`).
+**The distributable is `addons/dot_weather/`.** It requires [GameSpice Core](../dot-core) and nothing else. [GameSpice FX](../dot-fx) (draws the precipitation) and [GameSpice Lighting](../dot-lighting) (writes the fog) are **optional**: a build with neither still parses documents, runs the lightning schedule, answers `wind()` and emits `lightning` and `thunder`. For local development link all three, gitignored (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, and the same for `dot_fx` and `dot_lighting`).
 
 ## Read before
 
@@ -44,4 +44,4 @@ The family's two steps ([family CLAUDE.md](../../CLAUDE.md#validating-anything))
 ## Open items
 
 - Two games carry their own per-zone weather (a tick-driven draw of sky, wind, storm and fog for gameplay grip); that is prior art this does not replace: they decide *what the weather is* in a zone (simulation), this draws *a* weather. Folding them in means a game converting its zone draw into a `DotWeatherDoc` per zone; the steps, with mg-dangerous-delivery as the worked example, are in docs/design.md ("Adopting it in a game with its own weather"); nightly item `weather-adopt` covers the remaining game.
-- Gusts reach dot-fx as a lean: `advance` hands `gust()` (wind minus the steady wind) to `DotFxWeather.set_gust` every frame.
+- Gusts reach GameSpice FX as a lean: `advance` hands `gust()` (wind minus the steady wind) to `DotFxWeather.set_gust` every frame.

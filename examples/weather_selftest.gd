@@ -8,7 +8,7 @@ extends Node
 ## of it looks right: render the demo (examples/weather_demo.tscn) and look.
 ##
 ## The suite counts sections run to their last line and the checks it made. Checks that need an
-## optional addon (dot-fx, dot-lighting) are counted only when it is installed, so the same suite
+## optional addon (GameSpice FX, GameSpice Lighting) are counted only when it is installed, so the same suite
 ## passes in a project that has neither.
 ##
 ## [codeblock]
@@ -18,7 +18,7 @@ extends Node
 const SECTIONS := 11
 ## Checks that always run.
 const CHECKS_BASE := 124
-## Extra checks when dot-fx is installed, and when dot-lighting is.
+## Extra checks when GameSpice FX is installed, and when GameSpice Lighting is.
 const CHECKS_FX := 4
 const CHECKS_LIGHTING := 2
 
