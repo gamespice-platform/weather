@@ -1,4 +1,4 @@
-[![dot-weather - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/267-dot-weather)
+[![Weather - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/267-dot-weather)
 
 Everyday weather for Godot games: snow, rain, thunderstorms, wind and fog, described per map as a document, so any game gets them by adding a node.
 
