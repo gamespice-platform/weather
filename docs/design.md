@@ -12,13 +12,13 @@ One dictionary, every section optional, unknown keys refused at every level (see
 
 | Section | Becomes |
 | --- | --- |
-| `precipitation` | handed to dot-fx's `GSFxWeather` (volumes and all), with the steady wind folded in |
+| `precipitation` | handed to gs-fx's `GSFxWeather` (volumes and all), with the steady wind folded in |
 | `fog` | written onto the world's `Environment` through GameSpice Lighting |
 | `wind` | `GSWeather.wind()` and `GSWeatherSchedule.wind_at()`: a vector plus gusts, for other systems to read |
 | `thunder` | the lightning schedule, the flash, an optional bolt, and thunder delayed by distance |
 | `ambience` | sound ids, emitted as signals, never played |
 
-The precipitation section is validated by this addon's own parser, which repeats dot-fx's rules instead of calling it, on purpose: a server without dot-fx must accept or refuse exactly what a client with it does, or a map would load on one and not the other. The suite parses the handoff with dot-fx's parser when it is installed, which is what keeps the copy honest.
+The precipitation section is validated by this addon's own parser, which repeats gs-fx's rules instead of calling it, on purpose: a server without gs-fx must accept or refuse exactly what a client with it does, or a map would load on one and not the other. The suite parses the handoff with gs-fx's parser when it is installed, which is what keeps the copy honest.
 
 ## Lightning in sync without networking
 
@@ -38,9 +38,9 @@ Lightning is a full-screen brightness change, and the accepted guidance is no mo
 
 ## Optional addons, by path and level
 
-dot-fx and dot-lighting are optional. A script that names `GSFxWeather` or `GSLightRig` fails to parse in a build without them, and that failure takes the whole file with it. So neither is named: `GSWeather` asks `GSAddonApi.build_level("dot_fx") >= 5` and `("dot_lighting") >= 6`, loads the script by path, and talks to it with `new()`, `call()`, `set()` and `connect()`. This also keeps dot-ci from deriving a hard requirement on them.
+gs-fx and gs-lighting are optional. A script that names `GSFxWeather` or `GSLightRig` fails to parse in a build without them, and that failure takes the whole file with it. So neither is named: `GSWeather` asks `GSAddonApi.build_level("gs_fx") >= 5` and `("gs_lighting") >= 6`, loads the script by path, and talks to it with `new()`, `call()`, `set()` and `connect()`. This also keeps gs-ci from deriving a hard requirement on them.
 
-Without dot-fx the precipitation is kept in the document and not drawn. Without dot-lighting the fog is written by `_apply_fog_plain`, which sets the same eight `Environment` fields; the suite compares the two paths field by field.
+Without gs-fx the precipitation is kept in the document and not drawn. Without gs-lighting the fog is written by `_apply_fog_plain`, which sets the same eight `Environment` fields; the suite compares the two paths field by field.
 
 ## Fog belongs to the lighting
 
@@ -74,7 +74,7 @@ A second game with a zone draw does the same; if two want a transition between s
 ## Things deliberately not here
 
 - **Simulation.** No grip, no damage, no wind force on bodies. `wind()` and the signals are the interface.
-- **Sound.** Ids out, a game plays them through dot-audio. The loop's fade near a precipitation volume is `ambience_inside_changed`.
+- **Sound.** Ids out, a game plays them through gs-audio. The loop's fade near a precipitation volume is `ambience_inside_changed`.
 - **Networking of any kind.** That is the point.
 - **Gusts in the particles.** GameSpice FX takes one steady wind. If it grows a per-frame wind uniform this node can feed `wind()` into it.
 - **Transitions between weathers** (clear to storm over a minute). A game that wants one applies a sequence of documents or, better, asks for a `blend` field here when two games need it.

@@ -12,7 +12,7 @@ extends RefCounted
 ## [codeblock]
 ## {
 ##   "seed": 1234,                          # the lightning schedule's seed (default 0)
-##   "precipitation": {                     # handed to dot-fx's GSFxWeather, volumes included
+##   "precipitation": {                     # handed to gs-fx's GSFxWeather, volumes included
 ##     "kind": "rain",                      # "snow" or "rain"
 ##     "density": 1.2,                      # 0 to 4
 ##     "colour": "#c8d8ff",                 # html string or [r, g, b(, a)]
@@ -42,7 +42,7 @@ extends RefCounted
 const SNOW := &"snow"
 const RAIN := &"rain"
 
-## The most precipitation volumes one document may carry. Same ceiling as dot-fx.
+## The most precipitation volumes one document may carry. Same ceiling as gs-fx.
 const MAX_VOLUMES := 256
 
 ## The default shortest mean interval between strikes. With the schedule's placement inside each
@@ -179,8 +179,8 @@ func to_dict() -> Dictionary:
 	return out
 
 
-## The precipitation section in the shape dot-fx's weather document wants, with the wind's base
-## vector folded in (dot-fx takes one steady wind). Empty when there is no precipitation.
+## The precipitation section in the shape gs-fx's weather document wants, with the wind's base
+## vector folded in (gs-fx takes one steady wind). Empty when there is no precipitation.
 func precipitation_dict() -> Dictionary:
 	if not has_precipitation:
 		return {}
@@ -197,7 +197,7 @@ func precipitation_dict() -> Dictionary:
 ## The seeded stream every schedule draw comes from. Indexed draws advance nothing.
 func stream() -> GSRandomStream:
 	if _stream == null:
-		_stream = GSRandomStream.new(seed_value, &"dot_weather")
+		_stream = GSRandomStream.new(seed_value, &"gs_weather")
 	return _stream
 
 

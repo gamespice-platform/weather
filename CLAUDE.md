@@ -4,7 +4,7 @@ The family's everyday-weather layer: snow, rain, thunderstorms, wind and fog, de
 
 Read the family [CLAUDE.md](../../CLAUDE.md) first.
 
-**The distributable is `addons/dot_weather/`.** It requires [GameSpice Core](../dot-core) and nothing else. [GameSpice FX](../dot-fx) (draws the precipitation) and [GameSpice Lighting](../dot-lighting) (writes the fog) are **optional**: a build with neither still parses documents, runs the lightning schedule, answers `wind()` and emits `lightning` and `thunder`. For local development link all three, gitignored (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, and the same for `dot_fx` and `dot_lighting`).
+**The distributable is `addons/gs_weather/`.** It requires [GameSpice Core](../gs-core) and nothing else. [GameSpice FX](../gs-fx) (draws the precipitation) and [GameSpice Lighting](../gs-lighting) (writes the fog) are **optional**: a build with neither still parses documents, runs the lightning schedule, answers `wind()` and emits `lightning` and `thunder`. For local development link all three, gitignored (`ln -s ../../gs-core/addons/gs_core addons/gs_core`, and the same for `gs_fx` and `gs_lighting`).
 
 ## Read before
 
@@ -16,20 +16,20 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first.
 
 | Path | What |
 | --- | --- |
-| `core/dot_weather_doc.gd` | `GSWeatherDoc`: the document; `parse() -> GSResult` (unknown keys refused at every level), `to_dict()`, `precipitation_dict()`, `describe()` |
-| `core/dot_weather_schedule.gd` | `GSWeatherSchedule`: pure functions of (seed, time): `strike`, `strikes_between`, `thunders_between`, `flash_at`, `wind_at` |
-| `core/dot_weather_config.gd` | `GSWeatherConfig`: quality, density scale, `allow_flashes`, `flash_scale` (a `GSConfig`) |
-| `runtime/dot_weather.gd` | `GSWeather`: the node; `apply`, `setup`, `clear`, `advance`, `wind`, `describe`; signals `lightning`, `thunder`, `ambience_changed`, `ambience_inside_changed` |
-| `runtime/dot_weather_bolt.gd` | `GSWeatherBolt`: the bolt's polyline and ribbon mesh (pure geometry) |
-| `dot_weather_api.gd` | the API level (`GSAddonApi` rule) |
+| `core/gs_weather_doc.gd` | `GSWeatherDoc`: the document; `parse() -> GSResult` (unknown keys refused at every level), `to_dict()`, `precipitation_dict()`, `describe()` |
+| `core/gs_weather_schedule.gd` | `GSWeatherSchedule`: pure functions of (seed, time): `strike`, `strikes_between`, `thunders_between`, `flash_at`, `wind_at` |
+| `core/gs_weather_config.gd` | `GSWeatherConfig`: quality, density scale, `allow_flashes`, `flash_scale` (a `GSConfig`) |
+| `runtime/gs_weather.gd` | `GSWeather`: the node; `apply`, `setup`, `clear`, `advance`, `wind`, `describe`; signals `lightning`, `thunder`, `ambience_changed`, `ambience_inside_changed` |
+| `runtime/gs_weather_bolt.gd` | `GSWeatherBolt`: the bolt's polyline and ribbon mesh (pure geometry) |
+| `gs_weather_api.gd` | the API level (`GSAddonApi` rule) |
 | `examples/weather_selftest.tscn` | the suite |
 | `examples/weather_demo.tscn` | snow, rain with lightning, fog, and a held flash (`--mode`, `--shot`) |
 
-Paths except `examples/` are in `addons/dot_weather/`.
+Paths except `examples/` are in `addons/gs_weather/`.
 
 ## Running and testing
 
-The family's two steps ([family CLAUDE.md](../../CLAUDE.md#validating-anything)), then `timeout 120 godot --headless --path . res://examples/weather_selftest.tscn`. The suite counts sections and checks, and the checks that need an optional addon are counted only when it is installed (the same suite passes in a project that has neither: link only dot-core into a scratch project and run it). The last section is the armed one: it makes deliberately wrong claims and asserts the harness caught them. The suite cannot see whether anything looks right: after changing anything that draws, render the demo under xvfb (`--mode snow|rain|fog|flash --shot file.png`) and look.
+The family's two steps ([family CLAUDE.md](../../CLAUDE.md#validating-anything)), then `timeout 120 godot --headless --path . res://examples/weather_selftest.tscn`. The suite counts sections and checks, and the checks that need an optional addon are counted only when it is installed (the same suite passes in a project that has neither: link only gs-core into a scratch project and run it). The last section is the armed one: it makes deliberately wrong claims and asserts the harness caught them. The suite cannot see whether anything looks right: after changing anything that draws, render the demo under xvfb (`--mode snow|rain|fog|flash --shot file.png`) and look.
 
 ## Rules that bite
 

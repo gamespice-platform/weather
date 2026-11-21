@@ -1,6 +1,6 @@
 extends Node
 
-## Exercises dot-weather with no renderer, which nearly all of it survives.
+## Exercises gs-weather with no renderer, which nearly all of it survives.
 ##
 ## What a headless run can check is the document, the seeded schedule (determinism, spacing,
 ## the flash-rate guarantee, thunder delay by distance), the signals the node emits, the fog it
@@ -35,7 +35,7 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	_line("dot-weather self-test (dot-fx %s, dot-lighting %s)" % [
+	_line("gs-weather self-test (gs-fx %s, gs-lighting %s)" % [
 		"installed" if GSWeather.fx_available() else "absent",
 		"installed" if GSWeather.lighting_available() else "absent"])
 	_line("")
@@ -173,7 +173,7 @@ func _test_document() -> void:
 # --- 2 ------------------------------------------------------------------------
 
 func _test_handoff() -> void:
-	_section("Precipitation is handed on in the shape dot-fx wants")
+	_section("Precipitation is handed on in the shape gs-fx wants")
 	var d := _doc()
 	var p := d.precipitation_dict()
 	_check(p["kind"] == "rain" and p["volumes"].size() == 2, "the handoff keeps the kind and the volumes")
@@ -182,9 +182,9 @@ func _test_handoff() -> void:
 	_check(GSWeatherDoc.new().precipitation_dict().is_empty(), "a document without precipitation hands on nothing")
 
 	if GSWeather.fx_available():
-		var script: Script = load("res://addons/dot_fx/core/dot_fx_weather_def.gd")
+		var script: Script = load("res://addons/gs_fx/core/gs_fx_weather_def.gd")
 		var fx_res: GSResult = script.call("parse", p)
-		_check(fx_res.ok, "dot-fx accepts the handoff")
+		_check(fx_res.ok, "gs-fx accepts the handoff")
 		var def: Variant = fx_res.value
 		_check(def.volumes.size() == 2 and def.volumes[0] == d.precip_volumes[0], "and reads the same volumes")
 		_check(def.wind == Vector3(3, 0, 1) and String(def.kind) == "rain", "and the same wind and kind")
@@ -352,7 +352,7 @@ func _node() -> GSWeather:
 
 
 func _test_gust_lean() -> void:
-	_section("Gusts reach the drawing as a lean on dot-fx")
+	_section("Gusts reach the drawing as a lean on gs-fx")
 	var w := _node()
 	_check(w.gust() == Vector3.ZERO, "no document, no gust")
 	w.apply(_storm({"wind": {"vector": [3, 0, 1], "gust": 1.0, "gust_period": 5}}))
@@ -505,8 +505,8 @@ func _test_fog() -> void:
 		_check(plain_env.fog_depth_end == env.fog_depth_end and plain_env.fog_density == env.fog_density
 			and plain_env.fog_light_color == env.fog_light_color and plain_env.fog_depth_begin == env.fog_depth_begin
 			and plain_env.fog_mode == env.fog_mode and plain_env.fog_sky_affect == env.fog_sky_affect,
-			"the dot-lighting path and the plain fallback write the same fog")
-		_check(GSAddonApi.build_level("dot_lighting") >= GSWeather.LIGHTING_LEVEL, "and at an API level that has apply_fog")
+			"the gs-lighting path and the plain fallback write the same fog")
+		_check(GSAddonApi.build_level("gs_lighting") >= GSWeather.LIGHTING_LEVEL, "and at an API level that has apply_fog")
 	w.clear()
 	_check(env.fog_light_color.is_equal_approx(Color(1, 0, 0)) and is_equal_approx(env.fog_depth_end, 33.0) and is_equal_approx(env.fog_density, 0.25),
 		"clear() puts the map's own fog back")

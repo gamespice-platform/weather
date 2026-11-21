@@ -3,13 +3,13 @@
 /android/
 
 # Sibling repositories. For local development, symlink them:
-#   ln -s ../../dot-core/addons/dot_core addons/dot_core
-#   ln -s ../../dot-fx/addons/dot_fx addons/dot_fx                   (optional: drawing precipitation)
-#   ln -s ../../dot-lighting/addons/dot_lighting addons/dot_lighting (optional: fog)
+#   ln -s ../../gs-core/addons/gs_core addons/gs_core
+#   ln -s ../../gs-fx/addons/gs_fx addons/gs_fx                   (optional: drawing precipitation)
+#   ln -s ../../gs-lighting/addons/gs_lighting addons/gs_lighting (optional: fog)
 # Consumers copy the addons they want into their own project.
-/addons/dot_core
-/addons/dot_fx
-/addons/dot_lighting
+/addons/gs_core
+/addons/gs_fx
+/addons/gs_lighting
 
 # Exports
 build/

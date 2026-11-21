@@ -14,7 +14,7 @@ extends Node3D
 ## w.advance(delta, camera.global_position, match_time_seconds)
 ## [/codeblock]
 ##
-## [b]Precipitation is dot-fx's, fog is dot-lighting's, and both are optional.[/b] When dot-fx is
+## [b]Precipitation is gs-fx's, fog is gs-lighting's, and both are optional.[/b] When gs-fx is
 ## in the build the precipitation section is handed to its weather node (volumes and all); when
 ## GameSpice Lighting is in the build the fog is written onto the world's existing [Environment] by
 ## the same code that writes a map's lighting, never a second [WorldEnvironment]. Neither is
@@ -35,9 +35,9 @@ const CHANNEL := "weather"
 enum Quality { OFF, LOW, HIGH }
 
 ## Fog is applied from this alone when GameSpice Lighting is absent; the path of the optional rig.
-const _FX_SCRIPT := "res://addons/dot_fx/runtime/dot_fx_weather.gd"
-const _LIGHT_RIG := "res://addons/dot_lighting/runtime/dot_light_rig.gd"
-const _LIGHT_DOC := "res://addons/dot_lighting/core/dot_light_document.gd"
+const _FX_SCRIPT := "res://addons/gs_fx/runtime/gs_fx_weather.gd"
+const _LIGHT_RIG := "res://addons/gs_lighting/runtime/gs_light_rig.gd"
+const _LIGHT_DOC := "res://addons/gs_lighting/core/gs_light_document.gd"
 
 ## The API levels of the optional addons this needs (what introduced what is used).
 const FX_LEVEL := 5
@@ -60,7 +60,7 @@ signal thunder(sound: StringName, strike: Dictionary, metres: float, loudness: f
 ## strings for none, an empty dictionary when cleared). The game starts or stops its own loops.
 signal ambience_changed(ids: Dictionary)
 
-## Forwarded from dot-fx when its weather node says the camera entered or left a precipitation
+## Forwarded from gs-fx when its weather node says the camera entered or left a precipitation
 ## volume: the moment to fade the ambience loop.
 signal ambience_inside_changed(inside: bool)
 
@@ -99,12 +99,12 @@ var _bolt_slot: int = -1
 
 ## Whether GameSpice FX is in this build at a level that has the weather node.
 static func fx_available() -> bool:
-	return GSAddonApi.build_level("dot_fx") >= FX_LEVEL
+	return GSAddonApi.build_level("gs_fx") >= FX_LEVEL
 
 
 ## Whether GameSpice Lighting is in this build at a level that can write fog onto an environment.
 static func lighting_available() -> bool:
-	return GSAddonApi.build_level("dot_lighting") >= LIGHTING_LEVEL
+	return GSAddonApi.build_level("gs_lighting") >= LIGHTING_LEVEL
 
 
 ## Whether this process can draw. False on a dedicated server or any headless run.
@@ -148,7 +148,7 @@ func setup(d: GSWeatherDoc) -> void:
 	_fog_dirty = d.has_fog
 	if d.has_precipitation:
 		_build_fx()
-	GSLog.info(CHANNEL, "weather set", {"doc": d.describe(), "fx": _fx != null, "fog_via": "dot-lighting" if lighting_available() else "plain"})
+	GSLog.info(CHANNEL, "weather set", {"doc": d.describe(), "fx": _fx != null, "fog_via": "gs-lighting" if lighting_available() else "plain"})
 	ambience_changed.emit({"loop": d.ambience_loop, "wind": d.ambience_wind} if d.has_ambience else {})
 
 
@@ -215,7 +215,7 @@ func describe() -> String:
 		return "weather: none"
 	return "weather: %s | precip %s, fog %s, quality %s, wind %s, flash %.2f, t=%.1f" % [
 		doc.describe(),
-		("drawn by dot-fx" if _fx != null else ("not drawn (dot-fx absent or no display)" if doc.has_precipitation else "none")),
+		("drawn by gs-fx" if _fx != null else ("not drawn (gs-fx absent or no display)" if doc.has_precipitation else "none")),
 		("on" if _env != null and _env.fog_enabled and doc.has_fog else ("pending" if _fog_dirty else "none")),
 		Quality.keys()[clampi(config.quality, 0, 2)], _wind, _flash_level, _time,
 	]
@@ -234,7 +234,7 @@ func _build_fx() -> void:
 	_fx_density = -1.0
 	var res: Variant = _fx.call("apply", doc.precipitation_dict())
 	if res is GSResult and not (res as GSResult).ok:
-		GSLog.warn(CHANNEL, "dot-fx refused the precipitation", {"why": (res as GSResult).error.message})
+		GSLog.warn(CHANNEL, "gs-fx refused the precipitation", {"why": (res as GSResult).error.message})
 		_fx.queue_free()
 		_fx = null
 		return
@@ -293,7 +293,7 @@ func _apply_fog() -> void:
 	_fog_dirty = false
 
 
-## What dot-lighting's rig writes, for a build without it. A test pins the two together.
+## What gs-lighting's rig writes, for a build without it. A test pins the two together.
 func _apply_fog_plain(env: Environment) -> void:
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH

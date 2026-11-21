@@ -33,7 +33,7 @@ extends GSConfig
 
 
 func env_prefix() -> String:
-	return "DOT_WEATHER_"
+	return "GS_WEATHER_"
 
 
 func cli_prefix() -> String:
