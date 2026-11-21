@@ -1,6 +1,6 @@
 @tool
-class_name DotWeatherConfig
-extends DotConfig
+class_name GSWeatherConfig
+extends GSConfig
 
 ## What a player and an operator get to say about weather.
 ##
@@ -29,7 +29,7 @@ extends DotConfig
 ## The shortest thunder [code]mean_interval[/code] a weather document may ask for, in seconds.
 ## Default 3 (no more than three flashes a second, the photosensitivity guidance); any value, 0 is
 ## no floor. Lowering it is logged as a warning each time a faster storm is applied.
-@export_range(0.0, 10.0, 0.1, "or_greater") var min_thunder_interval: float = DotWeatherDoc.MIN_INTERVAL
+@export_range(0.0, 10.0, 0.1, "or_greater") var min_thunder_interval: float = GSWeatherDoc.MIN_INTERVAL
 
 
 func env_prefix() -> String:
@@ -40,9 +40,9 @@ func cli_prefix() -> String:
 	return "--weather-"
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if quality < 0 or quality > 2:
-		return DotResult.fail(DotError.CODE_INVALID, "quality is a tier from 0 to 2")
+		return GSResult.fail(GSError.CODE_INVALID, "quality is a tier from 0 to 2")
 	if not is_finite(min_thunder_interval) or min_thunder_interval < 0.0:
-		return DotResult.fail(DotError.CODE_INVALID, "min_thunder_interval must be 0 or more seconds")
-	return DotResult.success(null)
+		return GSResult.fail(GSError.CODE_INVALID, "min_thunder_interval must be 0 or more seconds")
+	return GSResult.success(null)

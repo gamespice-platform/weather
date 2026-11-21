@@ -1,4 +1,4 @@
-class_name DotWeatherDoc
+class_name GSWeatherDoc
 extends RefCounted
 
 ## A map's everyday weather as a document: what falls, how thick the air is, which way it blows,
@@ -12,7 +12,7 @@ extends RefCounted
 ## [codeblock]
 ## {
 ##   "seed": 1234,                          # the lightning schedule's seed (default 0)
-##   "precipitation": {                     # handed to dot-fx's DotFxWeather, volumes included
+##   "precipitation": {                     # handed to dot-fx's GSFxWeather, volumes included
 ##     "kind": "rain",                      # "snow" or "rain"
 ##     "density": 1.2,                      # 0 to 4
 ##     "colour": "#c8d8ff",                 # html string or [r, g, b(, a)]
@@ -36,7 +36,7 @@ extends RefCounted
 ## and a misspelt "mean_interval" as the default, and the storm would be wrong on every client
 ## in the same quiet way.
 ##
-## Distances are metres. [method parse] returns a [DotResult] naming the key that was wrong, and
+## Distances are metres. [method parse] returns a [GSResult] naming the key that was wrong, and
 ## [method to_dict] returns a document that parses back to the same thing.
 
 const SNOW := &"snow"
@@ -46,10 +46,10 @@ const RAIN := &"rain"
 const MAX_VOLUMES := 256
 
 ## The default shortest mean interval between strikes. With the schedule's placement inside each
-## interval (see [DotWeatherSchedule]) two strikes are never closer than half of this, so a flash
+## interval (see [GSWeatherSchedule]) two strikes are never closer than half of this, so a flash
 ## never repeats faster than the three a second the accessibility guidance allows, double flicker
 ## included. It is a default, not a limit: [method parse] takes another floor, and
-## [member DotWeatherConfig.min_thunder_interval] is where an operator sets one (0 is no floor).
+## [member GSWeatherConfig.min_thunder_interval] is where an operator sets one (0 is no floor).
 const MIN_INTERVAL := 3.0
 
 const _TOP := ["seed", "precipitation", "fog", "wind", "thunder", "ambience"]
@@ -105,20 +105,20 @@ var ambience_loop: StringName = &""
 var ambience_wind: StringName = &""
 var ambience_thunder: Array[StringName] = []
 
-var _stream: DotRandomStream = null
+var _stream: GSRandomStream = null
 
 
-## A document from a dictionary, or a failure naming the key. Succeeds with a [DotWeatherDoc].
+## A document from a dictionary, or a failure naming the key. Succeeds with a [GSWeatherDoc].
 ## [param min_interval] is the shortest [code]mean_interval[/code] accepted (default
 ## [constant MIN_INTERVAL], the accessibility floor); 0 accepts any positive interval. A negative
 ## floor is refused.
-static func parse(data: Dictionary, min_interval: float = MIN_INTERVAL) -> DotResult:
+static func parse(data: Dictionary, min_interval: float = MIN_INTERVAL) -> GSResult:
 	if not is_finite(min_interval) or min_interval < 0.0:
 		return _fail("weather: the minimum thunder interval must be 0 or more (got %s)" % min_interval)
 	var bad := _unknown(data, _TOP, "weather")
 	if bad != "":
 		return _fail(bad)
-	var d := DotWeatherDoc.new()
+	var d := GSWeatherDoc.new()
 
 	if data.has("seed"):
 		var s: Variant = data["seed"]
@@ -146,7 +146,7 @@ static func parse(data: Dictionary, min_interval: float = MIN_INTERVAL) -> DotRe
 		var r := d._parse_ambience(data["ambience"])
 		if not r.ok:
 			return r
-	return DotResult.success(d)
+	return GSResult.success(d)
 
 
 ## The document this was parsed from, so one built in code can be saved with a map.
@@ -195,9 +195,9 @@ func precipitation_dict() -> Dictionary:
 
 
 ## The seeded stream every schedule draw comes from. Indexed draws advance nothing.
-func stream() -> DotRandomStream:
+func stream() -> GSRandomStream:
 	if _stream == null:
-		_stream = DotRandomStream.new(seed_value, &"dot_weather")
+		_stream = GSRandomStream.new(seed_value, &"dot_weather")
 	return _stream
 
 
@@ -218,7 +218,7 @@ func describe() -> String:
 
 # --- sections -----------------------------------------------------------------
 
-func _parse_precipitation(v: Variant) -> DotResult:
+func _parse_precipitation(v: Variant) -> GSResult:
 	if not (v is Dictionary):
 		return _fail("weather: 'precipitation' must be an object")
 	var sec: Dictionary = v
@@ -250,10 +250,10 @@ func _parse_precipitation(v: Variant) -> DotResult:
 				return _fail("weather.precipitation: volume %d needs min+max or center+size, finite and not inside out" % i)
 			precip_volumes.append(box)
 	has_precipitation = true
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
-func _parse_fog(v: Variant) -> DotResult:
+func _parse_fog(v: Variant) -> GSResult:
 	if not (v is Dictionary):
 		return _fail("weather: 'fog' must be an object")
 	var sec: Dictionary = v
@@ -276,10 +276,10 @@ func _parse_fog(v: Variant) -> DotResult:
 	fog_end = e
 	fog_max_density = m
 	has_fog = true
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
-func _parse_wind(v: Variant) -> DotResult:
+func _parse_wind(v: Variant) -> GSResult:
 	if not (v is Dictionary):
 		return _fail("weather: 'wind' must be an object")
 	var sec: Dictionary = v
@@ -298,10 +298,10 @@ func _parse_wind(v: Variant) -> DotResult:
 	gust_strength = g
 	gust_period = p
 	has_wind = true
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
-func _parse_thunder(v: Variant, min_interval: float) -> DotResult:
+func _parse_thunder(v: Variant, min_interval: float) -> GSResult:
 	if not (v is Dictionary):
 		return _fail("weather: 'thunder' must be an object")
 	var sec: Dictionary = v
@@ -311,7 +311,7 @@ func _parse_thunder(v: Variant, min_interval: float) -> DotResult:
 	var iv: Variant = _num(sec.get("mean_interval", 15.0), min_interval, INF)
 	if iv == null or float(iv) <= 0.0:
 		if min_interval > 0.0:
-			return _fail("weather.thunder: 'mean_interval' must be %s seconds or more (a faster storm flashes faster than is safe to watch; DotWeatherConfig.min_thunder_interval lowers this floor)" % min_interval)
+			return _fail("weather.thunder: 'mean_interval' must be %s seconds or more (a faster storm flashes faster than is safe to watch; GSWeatherConfig.min_thunder_interval lowers this floor)" % min_interval)
 		return _fail("weather.thunder: 'mean_interval' must be more than 0 seconds")
 	var ch: Variant = _num(sec.get("chance", 0.8), 0.01, 1.0)
 	if ch == null:
@@ -353,10 +353,10 @@ func _parse_thunder(v: Variant, min_interval: float) -> DotResult:
 	thunder_height = ht
 	speed_of_sound = sos
 	has_thunder = true
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
-func _parse_ambience(v: Variant) -> DotResult:
+func _parse_ambience(v: Variant) -> GSResult:
 	if not (v is Dictionary):
 		return _fail("weather: 'ambience' must be an object")
 	var sec: Dictionary = v
@@ -377,13 +377,13 @@ func _parse_ambience(v: Variant) -> DotResult:
 				return _fail("weather.ambience: 'thunder' holds sound id strings only")
 			ambience_thunder.append(StringName(str(id)))
 	has_ambience = true
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 # --- helpers ------------------------------------------------------------------
 
-static func _fail(message: String) -> DotResult:
-	return DotResult.fail(DotError.CODE_INVALID, message)
+static func _fail(message: String) -> GSResult:
+	return GSResult.fail(GSError.CODE_INVALID, message)
 
 
 ## The first key of [param d] not in [param allowed], as a message, or "".

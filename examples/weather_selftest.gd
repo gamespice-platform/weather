@@ -30,14 +30,14 @@ var _quiet_failures := 0
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run()
 
 
 func _run() -> void:
 	_line("dot-weather self-test (dot-fx %s, dot-lighting %s)" % [
-		"installed" if DotWeather.fx_available() else "absent",
-		"installed" if DotWeather.lighting_available() else "absent"])
+		"installed" if GSWeather.fx_available() else "absent",
+		"installed" if GSWeather.lighting_available() else "absent"])
 	_line("")
 
 	_test_document()
@@ -53,9 +53,9 @@ func _run() -> void:
 	_test_armed()
 
 	var expected := CHECKS_BASE
-	if DotWeather.fx_available():
+	if GSWeather.fx_available():
 		expected += CHECKS_FX
-	if DotWeather.lighting_available():
+	if GSWeather.lighting_available():
 		expected += CHECKS_LIGHTING
 	_line("")
 	_line("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
@@ -88,11 +88,11 @@ func _storm(extra: Dictionary = {}) -> Dictionary:
 	return d
 
 
-func _doc(extra: Dictionary = {}) -> DotWeatherDoc:
-	var res := DotWeatherDoc.parse(_storm(extra))
+func _doc(extra: Dictionary = {}) -> GSWeatherDoc:
+	var res := GSWeatherDoc.parse(_storm(extra))
 	if not res.ok:
 		push_error("fixture refused: " + res.error.message)
-		return DotWeatherDoc.new()
+		return GSWeatherDoc.new()
 	return res.value
 
 
@@ -110,9 +110,9 @@ func _same_strikes(a: Array, b: Array) -> bool:
 func _test_document() -> void:
 	_section("A weather document parses, round-trips, and refuses what it does not know")
 
-	var res := DotWeatherDoc.parse(_storm())
+	var res := GSWeatherDoc.parse(_storm())
 	_check(res.ok, "the full document parses")
-	var d: DotWeatherDoc = res.value
+	var d: GSWeatherDoc = res.value
 	_check(d.has_precipitation and d.has_fog and d.has_wind and d.has_thunder and d.has_ambience,
 		"and every section is marked present")
 	_check(d.precip_kind == &"rain" and d.precip_volumes.size() == 2, "precipitation: kind and both volumes (min/max and center/size forms)")
@@ -120,11 +120,11 @@ func _test_document() -> void:
 	_check(is_equal_approx(d.fog_end, 120.0) and is_equal_approx(d.fog_max_density, 0.9), "fog in metres, with its maximum density")
 	_check(d.ambience_thunder.size() == 2 and d.ambience_loop == &"amb_rain", "ambience ids are kept as ids, not sounds")
 
-	var back := DotWeatherDoc.parse(d.to_dict())
-	_check(back.ok and (back.value as DotWeatherDoc).to_dict() == d.to_dict(), "to_dict() parses back to the same document")
+	var back := GSWeatherDoc.parse(d.to_dict())
+	_check(back.ok and (back.value as GSWeatherDoc).to_dict() == d.to_dict(), "to_dict() parses back to the same document")
 
-	var empty := DotWeatherDoc.parse({})
-	_check(empty.ok and not (empty.value as DotWeatherDoc).has_thunder and not (empty.value as DotWeatherDoc).has_fog,
+	var empty := GSWeatherDoc.parse({})
+	_check(empty.ok and not (empty.value as GSWeatherDoc).has_thunder and not (empty.value as GSWeatherDoc).has_fog,
 		"an empty document is valid and says it has nothing (absent is not zero)")
 
 	# Unknown keys, at every level.
@@ -138,7 +138,7 @@ func _test_document() -> void:
 		["ambience", {"ambience": {"rain": "x"}}],
 	]
 	for l in levels:
-		var r := DotWeatherDoc.parse(l[1])
+		var r := GSWeatherDoc.parse(l[1])
 		_check(not r.ok and "unknown key" in r.error.message, "an unknown key is refused at the %s, naming it" % l[0])
 
 	var bad := [
@@ -154,20 +154,20 @@ func _test_document() -> void:
 		["a non-id thunder sound", {"ambience": {"thunder": [3]}}],
 	]
 	for b in bad:
-		_check(not DotWeatherDoc.parse(b[1]).ok, "refused: %s" % b[0])
+		_check(not GSWeatherDoc.parse(b[1]).ok, "refused: %s" % b[0])
 
 	# The 3 s floor is a default an operator can lower, not a limit.
 	var quick := {"thunder": {"mean_interval": 1.0}}
-	var low := DotWeatherDoc.parse(quick, 0.5)
+	var low := GSWeatherDoc.parse(quick, 0.5)
 	_check(low.ok and is_equal_approx(low.value.thunder_interval, 1.0), "a lowered floor accepts a 1 s storm")
-	var none := DotWeatherDoc.parse({"thunder": {"mean_interval": 0.2}}, 0.0)
+	var none := GSWeatherDoc.parse({"thunder": {"mean_interval": 0.2}}, 0.0)
 	_check(none.ok, "a floor of 0 accepts any positive interval")
-	_check(not DotWeatherDoc.parse({"thunder": {"mean_interval": 0}}, 0.0).ok, "a floor of 0 still refuses a zero interval")
-	_check(not DotWeatherDoc.parse(quick, -1.0).ok, "a negative floor is refused")
-	_check(DotWeatherDoc.parse({"thunder": {"mean_interval": 86400}}).ok, "there is no upper limit on the interval")
-	var cfg := DotWeatherConfig.new()
+	_check(not GSWeatherDoc.parse({"thunder": {"mean_interval": 0}}, 0.0).ok, "a floor of 0 still refuses a zero interval")
+	_check(not GSWeatherDoc.parse(quick, -1.0).ok, "a negative floor is refused")
+	_check(GSWeatherDoc.parse({"thunder": {"mean_interval": 86400}}).ok, "there is no upper limit on the interval")
+	var cfg := GSWeatherConfig.new()
 	cfg.min_thunder_interval = -1.0
-	_check(not cfg.validate().ok and is_equal_approx(DotWeatherConfig.new().min_thunder_interval, 3.0), "the config defaults to 3 s and refuses a negative floor")
+	_check(not cfg.validate().ok and is_equal_approx(GSWeatherConfig.new().min_thunder_interval, 3.0), "the config defaults to 3 s and refuses a negative floor")
 
 
 # --- 2 ------------------------------------------------------------------------
@@ -179,11 +179,11 @@ func _test_handoff() -> void:
 	_check(p["kind"] == "rain" and p["volumes"].size() == 2, "the handoff keeps the kind and the volumes")
 	_check(p["wind"] == [3.0, 0.0, 1.0], "and folds the steady wind into it")
 	_check(_doc({"precipitation": {"kind": "snow"}}).precipitation_dict()["volumes"].is_empty(), "no volumes stays 'everywhere'")
-	_check(DotWeatherDoc.new().precipitation_dict().is_empty(), "a document without precipitation hands on nothing")
+	_check(GSWeatherDoc.new().precipitation_dict().is_empty(), "a document without precipitation hands on nothing")
 
-	if DotWeather.fx_available():
+	if GSWeather.fx_available():
 		var script: Script = load("res://addons/dot_fx/core/dot_fx_weather_def.gd")
-		var fx_res: DotResult = script.call("parse", p)
+		var fx_res: GSResult = script.call("parse", p)
 		_check(fx_res.ok, "dot-fx accepts the handoff")
 		var def: Variant = fx_res.value
 		_check(def.volumes.size() == 2 and def.volumes[0] == d.precip_volumes[0], "and reads the same volumes")
@@ -196,34 +196,34 @@ func _test_handoff() -> void:
 func _test_schedule() -> void:
 	_section("The lightning schedule is a pure function of seed and time")
 	var d := _doc()
-	var a := DotWeatherSchedule.strikes_between(d, 0.0, 600.0)
-	var b := DotWeatherSchedule.strikes_between(_doc(), 0.0, 600.0)
+	var a := GSWeatherSchedule.strikes_between(d, 0.0, 600.0)
+	var b := GSWeatherSchedule.strikes_between(_doc(), 0.0, 600.0)
 	_check(a.size() == 60, "chance 1.0 over 600 s at a 10 s interval is 60 strikes (%d)" % a.size())
 	_check(_same_strikes(a, b), "two clients parsing the document get the same strikes: slot, time and place")
 
-	var other := DotWeatherSchedule.strikes_between(_doc({"seed": 78}), 0.0, 600.0)
+	var other := GSWeatherSchedule.strikes_between(_doc({"seed": 78}), 0.0, 600.0)
 	_check(not _same_strikes(a, other), "a different seed is a different storm")
 
 	# Statelessness: asking about the far future first changes nothing.
 	var d2 := _doc()
-	var far := DotWeatherSchedule.strike(d2, 9000)
-	var first := DotWeatherSchedule.strike(d2, 0)
-	_check(first["time"] == a[0]["time"] and far == DotWeatherSchedule.strike(d2, 9000), "slot 9000 can be asked first, and asked twice, with no effect on slot 0")
+	var far := GSWeatherSchedule.strike(d2, 9000)
+	var first := GSWeatherSchedule.strike(d2, 0)
+	_check(first["time"] == a[0]["time"] and far == GSWeatherSchedule.strike(d2, 9000), "slot 9000 can be asked first, and asked twice, with no effect on slot 0")
 
 	# A late joiner or a replay seek gets the same strikes for the same window.
-	var whole := DotWeatherSchedule.strikes_between(d, 100.0, 300.0)
-	var parts := DotWeatherSchedule.strikes_between(d, 100.0, 217.3)
-	parts.append_array(DotWeatherSchedule.strikes_between(d, 217.3, 300.0))
+	var whole := GSWeatherSchedule.strikes_between(d, 100.0, 300.0)
+	var parts := GSWeatherSchedule.strikes_between(d, 100.0, 217.3)
+	parts.append_array(GSWeatherSchedule.strikes_between(d, 217.3, 300.0))
 	_check(_same_strikes(whole, parts), "a window equals the concatenation of its halves (late join, seek)")
 
 	var edge: Dictionary = a[3]
-	_check(DotWeatherSchedule.strikes_between(d, edge["time"], edge["time"] + 0.001).is_empty(), "a window is open at its start")
-	_check(DotWeatherSchedule.strikes_between(d, edge["time"] - 0.001, edge["time"]).size() == 1, "and closed at its end")
+	_check(GSWeatherSchedule.strikes_between(d, edge["time"], edge["time"] + 0.001).is_empty(), "a window is open at its start")
+	_check(GSWeatherSchedule.strikes_between(d, edge["time"] - 0.001, edge["time"]).size() == 1, "and closed at its end")
 
 	var closest := 1e9
 	var in_ring := true
 	var in_slot := true
-	var all := DotWeatherSchedule.strikes_between(d, 0.0, 6000.0)
+	var all := GSWeatherSchedule.strikes_between(d, 0.0, 6000.0)
 	for i in range(all.size()):
 		var st: Dictionary = all[i]
 		var dist := Vector2(st["position"].x, st["position"].z).length()
@@ -237,10 +237,10 @@ func _test_schedule() -> void:
 	_check(closest >= 5.0 - 1e-6, "so two strikes are never closer than half an interval (closest %.2f s)" % closest)
 
 	var rare := _doc({"thunder": {"mean_interval": 10, "chance": 0.3}})
-	var n := DotWeatherSchedule.strikes_between(rare, 0.0, 20000.0).size()
+	var n := GSWeatherSchedule.strikes_between(rare, 0.0, 20000.0).size()
 	_check(n > 540 and n < 660, "chance 0.3 over 2000 slots gives about 600 strikes (%d)" % n)
-	_check(DotWeatherSchedule.strikes_between(DotWeatherDoc.new(), 0.0, 600.0).is_empty(), "no thunder section, no strikes")
-	_check(DotWeatherSchedule.strike(d, -1).is_empty(), "and no slot before time zero")
+	_check(GSWeatherSchedule.strikes_between(GSWeatherDoc.new(), 0.0, 600.0).is_empty(), "no thunder section, no strikes")
+	_check(GSWeatherSchedule.strike(d, -1).is_empty(), "and no slot before time zero")
 	var sounds := {}
 	for st in all:
 		sounds[st["sound"]] = true
@@ -252,32 +252,32 @@ func _test_schedule() -> void:
 func _test_thunder() -> void:
 	_section("Thunder arrives later by distance, per listener")
 	var d := _doc()
-	var st: Dictionary = DotWeatherSchedule.strike(d, 5)
+	var st: Dictionary = GSWeatherSchedule.strike(d, 5)
 	var here := Vector3.ZERO
 	var near: Vector3 = st["position"] + Vector3(10, 0, 0)
-	var delay_here := DotWeatherSchedule.thunder_delay(d, st, here)
-	var delay_near := DotWeatherSchedule.thunder_delay(d, st, near)
+	var delay_here := GSWeatherSchedule.thunder_delay(d, st, here)
+	var delay_near := GSWeatherSchedule.thunder_delay(d, st, near)
 	_check(is_equal_approx(delay_here, st["distance"] / 343.0), "delay is distance over the speed of sound")
 	_check(delay_near < delay_here, "a listener closer to the strike hears it first")
 
 	var t0: float = st["time"] - 0.1
 	var t1: float = st["time"] + delay_here + 0.1
-	var heard := DotWeatherSchedule.thunders_between(d, here, t0, t1)
+	var heard := GSWeatherSchedule.thunders_between(d, here, t0, t1)
 	_check(heard.size() == 1 and absf(heard[0]["delay"] - delay_here) < 1e-6, "the window around flash plus delay holds exactly that thunder")
-	_check(DotWeatherSchedule.thunders_between(d, here, t0, st["time"] + delay_here - 0.01).is_empty(), "and none before it arrives")
-	_check(DotWeatherSchedule.thunders_between(d, here, st["time"] + delay_here, st["time"] + delay_here + 5.0).is_empty()
-		or DotWeatherSchedule.thunders_between(d, here, st["time"] + delay_here, st["time"] + delay_here + 5.0)[0]["slot"] != 5,
+	_check(GSWeatherSchedule.thunders_between(d, here, t0, st["time"] + delay_here - 0.01).is_empty(), "and none before it arrives")
+	_check(GSWeatherSchedule.thunders_between(d, here, st["time"] + delay_here, st["time"] + delay_here + 5.0).is_empty()
+		or GSWeatherSchedule.thunders_between(d, here, st["time"] + delay_here, st["time"] + delay_here + 5.0)[0]["slot"] != 5,
 		"and not twice")
 	# The flash was in an earlier window than the thunder: the look-back finds it.
-	var late := DotWeatherSchedule.thunders_between(d, here, st["time"] + delay_here - 0.001, st["time"] + delay_here + 0.001)
+	var late := GSWeatherSchedule.thunders_between(d, here, st["time"] + delay_here - 0.001, st["time"] + delay_here + 0.001)
 	_check(late.size() == 1 and late[0]["slot"] == 5, "a thunder is found even though its flash was seconds earlier")
 	var cover := true
 	for slot in range(0, 40):
-		var s: Dictionary = DotWeatherSchedule.strike(d, slot)
-		var ar: float = s["time"] + DotWeatherSchedule.thunder_delay(d, s, Vector3(400, 0, -300))
-		cover = cover and DotWeatherSchedule.thunders_between(d, Vector3(400, 0, -300), ar - 0.01, ar + 0.01).size() == 1
+		var s: Dictionary = GSWeatherSchedule.strike(d, slot)
+		var ar: float = s["time"] + GSWeatherSchedule.thunder_delay(d, s, Vector3(400, 0, -300))
+		cover = cover and GSWeatherSchedule.thunders_between(d, Vector3(400, 0, -300), ar - 0.01, ar + 0.01).size() == 1
 	_check(cover, "every one of 40 strikes is heard exactly once by a listener away from the centre")
-	_check(DotWeatherSchedule.distance_dim(d, 0.0) == 1.0 and DotWeatherSchedule.distance_dim(d, 5000.0) == 0.2, "loudness falls with distance to a floor of 0.2")
+	_check(GSWeatherSchedule.distance_dim(d, 0.0) == 1.0 and GSWeatherSchedule.distance_dim(d, 5000.0) == 0.2, "loudness falls with distance to a floor of 0.2")
 
 
 # --- 5 ------------------------------------------------------------------------
@@ -285,19 +285,19 @@ func _test_thunder() -> void:
 func _test_flash_envelope() -> void:
 	_section("A flash has an attack, a flicker and an end, and is rate-safe")
 	var d := _doc()
-	var st: Dictionary = DotWeatherSchedule.strike(d, 4)
+	var st: Dictionary = GSWeatherSchedule.strike(d, 4)
 	var t: float = st["time"]
-	_check(DotWeatherSchedule.flash_envelope(d, st, t - 0.01) == 0.0, "no flash before the strike")
-	_check(DotWeatherSchedule.flash_envelope(d, st, t + d.flash_duration + 0.01) == 0.0, "and none after its duration")
+	_check(GSWeatherSchedule.flash_envelope(d, st, t - 0.01) == 0.0, "no flash before the strike")
+	_check(GSWeatherSchedule.flash_envelope(d, st, t + d.flash_duration + 0.01) == 0.0, "and none after its duration")
 	var peak := 0.0
 	for i in range(0, 90):
-		peak = maxf(peak, DotWeatherSchedule.flash_envelope(d, st, t + i * 0.005))
+		peak = maxf(peak, GSWeatherSchedule.flash_envelope(d, st, t + i * 0.005))
 	_check(peak > 0.4 and peak <= 1.0, "the peak is bright and never above 1 (%.2f)" % peak)
-	var e_dip := DotWeatherSchedule.flash_envelope(d, st, t + 0.12)
-	var e_flick := DotWeatherSchedule.flash_envelope(d, st, t + 0.16)
+	var e_dip := GSWeatherSchedule.flash_envelope(d, st, t + 0.12)
+	var e_flick := GSWeatherSchedule.flash_envelope(d, st, t + 0.16)
 	_check(e_flick > e_dip, "a second flicker follows the first (%.2f after %.2f)" % [e_flick, e_dip])
-	_check(DotWeatherSchedule.flash_at(d, t + 0.03)["level"] > 0.0 and DotWeatherSchedule.flash_at(d, t + 0.03)["strike"]["slot"] == 4, "flash_at finds the strike behind the brightness")
-	_check(DotWeatherSchedule.flash_at(d, t + 0.03, Vector3(5000, 0, 0))["level"] < DotWeatherSchedule.flash_at(d, t + 0.03)["level"], "and dims a flash seen from far away")
+	_check(GSWeatherSchedule.flash_at(d, t + 0.03)["level"] > 0.0 and GSWeatherSchedule.flash_at(d, t + 0.03)["strike"]["slot"] == 4, "flash_at finds the strike behind the brightness")
+	_check(GSWeatherSchedule.flash_at(d, t + 0.03, Vector3(5000, 0, 0))["level"] < GSWeatherSchedule.flash_at(d, t + 0.03)["level"], "and dims a flash seen from far away")
 
 	# Photosensitivity: at the shortest allowed interval, count rising edges in every second.
 	var fast := _doc({"thunder": {"mean_interval": 3.0, "chance": 1.0}})
@@ -305,7 +305,7 @@ func _test_flash_envelope() -> void:
 	var prev := 0.0
 	var t_s := 0.0
 	while t_s < 300.0:
-		var lvl: float = DotWeatherSchedule.flash_at(fast, t_s)["level"]
+		var lvl: float = GSWeatherSchedule.flash_at(fast, t_s)["level"]
 		if lvl > 0.3 and prev <= 0.3:
 			edges.append(t_s)
 		prev = lvl
@@ -325,12 +325,12 @@ func _test_flash_envelope() -> void:
 func _test_wind() -> void:
 	_section("Wind is a function of time that other systems can read")
 	var d := _doc()
-	_check(DotWeatherSchedule.wind_at(d, 12.5) == DotWeatherSchedule.wind_at(_doc(), 12.5), "the same wind at the same time on every client")
+	_check(GSWeatherSchedule.wind_at(d, 12.5) == GSWeatherSchedule.wind_at(_doc(), 12.5), "the same wind at the same time on every client")
 	var lo := 1e9
 	var hi := 0.0
 	var dir_ok := true
 	for i in range(0, 2000):
-		var w := DotWeatherSchedule.wind_at(d, i * 0.1)
+		var w := GSWeatherSchedule.wind_at(d, i * 0.1)
 		lo = minf(lo, w.length())
 		hi = maxf(hi, w.length())
 		dir_ok = dir_ok and w.normalized().is_equal_approx(d.wind_vector.normalized())
@@ -338,15 +338,15 @@ func _test_wind() -> void:
 	_check(lo >= base - 1e-4, "gusts only add to the wind (lowest %.2f, steady %.2f)" % [lo, base])
 	_check(hi > base * 1.3 and hi <= base * (1.0 + d.gust_strength) + 1e-4, "and reach a peak within the document's gust strength (%.2f)" % hi)
 	_check(dir_ok, "along the wind's own direction")
-	_check(DotWeatherSchedule.wind_at(_doc({"wind": {"vector": [2, 0, 0]}}), 40.0) == Vector3(2, 0, 0), "no gust strength is a steady wind")
-	_check(DotWeatherSchedule.wind_at(DotWeatherDoc.new(), 10.0) == Vector3.ZERO, "no wind section is no wind")
+	_check(GSWeatherSchedule.wind_at(_doc({"wind": {"vector": [2, 0, 0]}}), 40.0) == Vector3(2, 0, 0), "no gust strength is a steady wind")
+	_check(GSWeatherSchedule.wind_at(GSWeatherDoc.new(), 10.0) == Vector3.ZERO, "no wind section is no wind")
 
 
 # --- 7 ------------------------------------------------------------------------
 
-func _node() -> DotWeather:
-	var w := DotWeather.new()
-	w.config = DotWeatherConfig.new()
+func _node() -> GSWeather:
+	var w := GSWeather.new()
+	w.config = GSWeatherConfig.new()
 	add_child(w)
 	return w
 
@@ -395,9 +395,9 @@ func _test_node_events() -> void:
 	_check(res.ok and ambience.size() == 1 and ambience[0]["loop"] == &"amb_rain", "applying emits the ambience ids for the game to play")
 	_check(w.doc != null and w.describe().begins_with("weather: seed 77"), "describe() names the document")
 
-	var d: DotWeatherDoc = w.doc
-	var st: Dictionary = DotWeatherSchedule.strike(d, 3)
-	var delay := DotWeatherSchedule.thunder_delay(d, st, Vector3.ZERO)
+	var d: GSWeatherDoc = w.doc
+	var st: Dictionary = GSWeatherSchedule.strike(d, 3)
+	var delay := GSWeatherSchedule.thunder_delay(d, st, Vector3.ZERO)
 	w.advance(0.016, Vector3.ZERO, st["time"] - 1.0)
 	_check(flashes.is_empty() and thunders.is_empty(), "the first frame emits nothing, whatever time it is (a late joiner)")
 	w.advance(0.016, Vector3.ZERO, st["time"] - 0.5)
@@ -441,7 +441,7 @@ func _test_node_events() -> void:
 	w.clear()
 	_check(w.doc == null and w.wind() == Vector3.ZERO and ambience.back().is_empty(), "clear() removes the document, the wind and tells the game to stop its loops")
 	_check(not w.apply({"fog": {"nope": 1}}).ok and w.doc == null, "a bad document is refused and leaves the node as it was")
-	_check(not DotWeather.can_render(), "headless: nothing is drawn")
+	_check(not GSWeather.can_render(), "headless: nothing is drawn")
 	var h := _node()
 	h.apply(_storm())
 	_check(h.get_child_count() == 0, "so no precipitation node or bolt is built (the schedule still runs)")
@@ -488,9 +488,9 @@ func _test_fog() -> void:
 	var world := _env_world()
 	var host: Node3D = world[0]
 	var env: Environment = world[1]
-	var w := DotWeather.new()
-	w.config = DotWeatherConfig.new()
-	w.environment_ref = DotNodeRef.of_path(NodePath("../WorldEnvironment"))
+	var w := GSWeather.new()
+	w.config = GSWeatherConfig.new()
+	w.environment_ref = GSNodeRef.of_path(NodePath("../WorldEnvironment"))
 	host.add_child(w)
 	_check(w.apply(_storm()).ok, "a document with fog applies")
 	w.advance(0.016, Vector3.ZERO, 1.0)
@@ -499,14 +499,14 @@ func _test_fog() -> void:
 	_check(is_equal_approx(env.fog_density, 0.9) and env.fog_sky_affect == 0.0, "with the document's own maximum density and the sky left alone")
 	_check(_count_world_environments(host) == 1, "no second WorldEnvironment was made")
 
-	if DotWeather.lighting_available():
+	if GSWeather.lighting_available():
 		var plain_env := Environment.new()
 		w._apply_fog_plain(plain_env)
 		_check(plain_env.fog_depth_end == env.fog_depth_end and plain_env.fog_density == env.fog_density
 			and plain_env.fog_light_color == env.fog_light_color and plain_env.fog_depth_begin == env.fog_depth_begin
 			and plain_env.fog_mode == env.fog_mode and plain_env.fog_sky_affect == env.fog_sky_affect,
 			"the dot-lighting path and the plain fallback write the same fog")
-		_check(DotAddonApi.build_level("dot_lighting") >= DotWeather.LIGHTING_LEVEL, "and at an API level that has apply_fog")
+		_check(GSAddonApi.build_level("dot_lighting") >= GSWeather.LIGHTING_LEVEL, "and at an API level that has apply_fog")
 	w.clear()
 	_check(env.fog_light_color.is_equal_approx(Color(1, 0, 0)) and is_equal_approx(env.fog_depth_end, 33.0) and is_equal_approx(env.fog_density, 0.25),
 		"clear() puts the map's own fog back")
@@ -521,8 +521,8 @@ func _test_fog() -> void:
 	_check(is_equal_approx(env.fog_depth_end, 33.0), "and clearing restores the map's fog, not the first document's")
 
 	var plain_world := _env_world()
-	var no_fog := DotWeather.new()
-	no_fog.config = DotWeatherConfig.new()
+	var no_fog := GSWeather.new()
+	no_fog.config = GSWeatherConfig.new()
 	plain_world[0].add_child(no_fog)
 	var before_end: float = plain_world[1].fog_depth_end
 	no_fog.apply({"thunder": {"mean_interval": 10}})
@@ -533,9 +533,9 @@ func _test_fog() -> void:
 	# is added first (so it is the active one) and the weather's ref points at the second.
 	var decoy := _env_world()
 	var target := _env_world()
-	var aimed := DotWeather.new()
-	aimed.config = DotWeatherConfig.new()
-	aimed.environment_ref = DotNodeRef.of_path(NodePath("../WorldEnvironment"))
+	var aimed := GSWeather.new()
+	aimed.config = GSWeatherConfig.new()
+	aimed.environment_ref = GSNodeRef.of_path(NodePath("../WorldEnvironment"))
 	target[0].add_child(aimed)
 	aimed.apply(_storm())
 	aimed.advance(0.016, Vector3.ZERO, 1.0)
@@ -545,8 +545,8 @@ func _test_fog() -> void:
 	for n in [decoy[0], target[0], plain_world[0], host]:
 		n.free()
 
-	var bare := DotWeather.new()
-	bare.config = DotWeatherConfig.new()
+	var bare := GSWeather.new()
+	bare.config = GSWeatherConfig.new()
 	add_child(bare)
 	bare.apply(_storm())
 	bare.advance(0.016, Vector3.ZERO, 1.0)
@@ -560,13 +560,13 @@ func _test_flash_on_environment() -> void:
 	_section("A flash brightens the sky and ambient light, then restores them exactly")
 	var world := _env_world()
 	var env: Environment = world[1]
-	var w := DotWeather.new()
-	w.config = DotWeatherConfig.new()
-	w.environment_ref = DotNodeRef.of_path(NodePath("../WorldEnvironment"))
+	var w := GSWeather.new()
+	w.config = GSWeatherConfig.new()
+	w.environment_ref = GSNodeRef.of_path(NodePath("../WorldEnvironment"))
 	world[0].add_child(w)
 	w.apply(_storm())
-	var d: DotWeatherDoc = w.doc
-	var st: Dictionary = DotWeatherSchedule.strike(d, 6)
+	var d: GSWeatherDoc = w.doc
+	var st: Dictionary = GSWeatherSchedule.strike(d, 6)
 	var cam: Vector3 = st["position"] + Vector3(30, 0, 0)
 	w.advance(0.016, cam, st["time"] - 0.1)
 	_check(is_equal_approx(env.ambient_light_energy, 1.0) and w.flash_level() == 0.0, "before the strike nothing is changed")
@@ -578,7 +578,7 @@ func _test_flash_on_environment() -> void:
 	w.advance(0.016, cam, st["time"] + 0.8)
 	_check(env.ambient_light_energy == 1.0 and env.background_energy_multiplier == 1.0, "after the flash both are exactly what the world had")
 
-	var cfg := DotWeatherConfig.new()
+	var cfg := GSWeatherConfig.new()
 	cfg.allow_flashes = false
 	w.apply_config(cfg)
 	var fired: Array = []
@@ -607,12 +607,12 @@ func _test_flash_on_environment() -> void:
 	w.clear()
 	_check(env.ambient_light_energy == 1.0 and env.background_energy_multiplier == 1.0, "clearing in the middle of a flash restores the world too")
 
-	var geo := DotWeatherBolt.points(d, st, st["position"] + Vector3.UP * 220.0, st["position"])
-	_check(geo.size() == 3 and geo[0].size() == DotWeatherBolt.SEGMENTS + 1, "a bolt is a trunk and two branches")
-	_check(geo[0][0].is_equal_approx(st["position"] + Vector3.UP * 220.0) and geo[0][DotWeatherBolt.SEGMENTS].is_equal_approx(st["position"]), "from the cloud to the ground point, exactly")
-	var geo2 := DotWeatherBolt.points(d, st, st["position"] + Vector3.UP * 220.0, st["position"])
+	var geo := GSWeatherBolt.points(d, st, st["position"] + Vector3.UP * 220.0, st["position"])
+	_check(geo.size() == 3 and geo[0].size() == GSWeatherBolt.SEGMENTS + 1, "a bolt is a trunk and two branches")
+	_check(geo[0][0].is_equal_approx(st["position"] + Vector3.UP * 220.0) and geo[0][GSWeatherBolt.SEGMENTS].is_equal_approx(st["position"]), "from the cloud to the ground point, exactly")
+	var geo2 := GSWeatherBolt.points(d, st, st["position"] + Vector3.UP * 220.0, st["position"])
 	_check(geo[1] == geo2[1] and geo[0] == geo2[0], "and the same jags on every client")
-	var m := DotWeatherBolt.mesh(geo, cam, 1.0)
+	var m := GSWeatherBolt.mesh(geo, cam, 1.0)
 	_check(m.get_surface_count() == 1, "the ribbon is one surface")
 	world[0].free()
 
@@ -622,8 +622,8 @@ func _test_flash_on_environment() -> void:
 func _test_armed() -> void:
 	_section("The suite is armed: a broken thing fails the checks that guard it")
 	var d := _doc()
-	var a := DotWeatherSchedule.strikes_between(d, 0.0, 300.0)
-	_check(not _same_strikes(a, DotWeatherSchedule.strikes_between(_doc({"seed": 5}), 0.0, 300.0)),
+	var a := GSWeatherSchedule.strikes_between(d, 0.0, 300.0)
+	_check(not _same_strikes(a, GSWeatherSchedule.strikes_between(_doc({"seed": 5}), 0.0, 300.0)),
 		"the strike comparison tells two different storms apart")
 	var broken: Array[Dictionary] = a.duplicate()
 	var copy: Dictionary = broken[2].duplicate()
@@ -633,9 +633,9 @@ func _test_armed() -> void:
 
 	_quiet = true
 	_quiet_failures = 0
-	_check(DotWeatherDoc.parse({"surprise": 1}).ok, "(deliberately wrong) an unknown key accepted")
-	_check(DotWeatherSchedule.strikes_between(d, 0.0, 600.0).size() == 61, "(deliberately wrong) a miscounted schedule")
-	var spare := DotWeather.new()
+	_check(GSWeatherDoc.parse({"surprise": 1}).ok, "(deliberately wrong) an unknown key accepted")
+	_check(GSWeatherSchedule.strikes_between(d, 0.0, 600.0).size() == 61, "(deliberately wrong) a miscounted schedule")
+	var spare := GSWeather.new()
 	_check(spare.describe() == "weather: 1", "(deliberately wrong) a wrong description")
 	spare.free()
 	var caught := _quiet_failures

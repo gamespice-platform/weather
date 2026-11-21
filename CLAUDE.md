@@ -16,12 +16,12 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first.
 
 | Path | What |
 | --- | --- |
-| `core/dot_weather_doc.gd` | `DotWeatherDoc`: the document; `parse() -> DotResult` (unknown keys refused at every level), `to_dict()`, `precipitation_dict()`, `describe()` |
-| `core/dot_weather_schedule.gd` | `DotWeatherSchedule`: pure functions of (seed, time): `strike`, `strikes_between`, `thunders_between`, `flash_at`, `wind_at` |
-| `core/dot_weather_config.gd` | `DotWeatherConfig`: quality, density scale, `allow_flashes`, `flash_scale` (a `DotConfig`) |
-| `runtime/dot_weather.gd` | `DotWeather`: the node; `apply`, `setup`, `clear`, `advance`, `wind`, `describe`; signals `lightning`, `thunder`, `ambience_changed`, `ambience_inside_changed` |
-| `runtime/dot_weather_bolt.gd` | `DotWeatherBolt`: the bolt's polyline and ribbon mesh (pure geometry) |
-| `dot_weather_api.gd` | the API level (`DotAddonApi` rule) |
+| `core/dot_weather_doc.gd` | `GSWeatherDoc`: the document; `parse() -> GSResult` (unknown keys refused at every level), `to_dict()`, `precipitation_dict()`, `describe()` |
+| `core/dot_weather_schedule.gd` | `GSWeatherSchedule`: pure functions of (seed, time): `strike`, `strikes_between`, `thunders_between`, `flash_at`, `wind_at` |
+| `core/dot_weather_config.gd` | `GSWeatherConfig`: quality, density scale, `allow_flashes`, `flash_scale` (a `GSConfig`) |
+| `runtime/dot_weather.gd` | `GSWeather`: the node; `apply`, `setup`, `clear`, `advance`, `wind`, `describe`; signals `lightning`, `thunder`, `ambience_changed`, `ambience_inside_changed` |
+| `runtime/dot_weather_bolt.gd` | `GSWeatherBolt`: the bolt's polyline and ribbon mesh (pure geometry) |
+| `dot_weather_api.gd` | the API level (`GSAddonApi` rule) |
 | `examples/weather_selftest.tscn` | the suite |
 | `examples/weather_demo.tscn` | snow, rain with lightning, fog, and a held flash (`--mode`, `--shot`) |
 
@@ -33,15 +33,15 @@ The family's two steps ([family CLAUDE.md](../../CLAUDE.md#validating-anything))
 
 ## Rules that bite
 
-- **Never name a `DotFx*` or `DotLight*` class in a script here.** A named class from an absent addon is a parse error in the whole file. They are reached by path (`load(...)`, `.new()`, `Object.call`) behind `fx_available()` and `lighting_available()` (API levels 5 and 6). [design](docs/design.md#optional-addons-by-path-and-level)
+- **Never name a `GSFx*` or `GSLight*` class in a script here.** A named class from an absent addon is a parse error in the whole file. They are reached by path (`load(...)`, `.new()`, `Object.call`) behind `fx_available()` and `lighting_available()` (API levels 5 and 6). [design](docs/design.md#optional-addons-by-path-and-level)
 - **Lightning is never sent.** It is a pure function of the document's seed and the shared match time a game passes to `advance()`. Anything that adds state to the schedule (a countdown, a random stream that advances) breaks late join, seeking and agreement. [design](docs/design.md#lightning-in-sync-without-networking)
-- **Fog is written onto the existing `Environment` through `DotLightRig.apply_fog`, never a second `WorldEnvironment`**, and the map's own fog is put back by `clear()`. [design](docs/design.md#fog-belongs-to-the-lighting)
-- **The shortest storm is 3 s per interval by default** (`DotWeatherConfig.min_thunder_interval`, overridable, 0 = no floor, lowering it logs a warning) and a strike sits in the middle half of its slot, so two are at least 1.5 s apart: the three-flashes-a-second guarantee lives in the document's range check and the schedule's placement, and a test counts it. [design](docs/design.md#the-flash-rate-is-guaranteed-by-construction)
+- **Fog is written onto the existing `Environment` through `GSLightRig.apply_fog`, never a second `WorldEnvironment`**, and the map's own fog is put back by `clear()`. [design](docs/design.md#fog-belongs-to-the-lighting)
+- **The shortest storm is 3 s per interval by default** (`GSWeatherConfig.min_thunder_interval`, overridable, 0 = no floor, lowering it logs a warning) and a strike sits in the middle half of its slot, so two are at least 1.5 s apart: the three-flashes-a-second guarantee lives in the document's range check and the schedule's placement, and a test counts it. [design](docs/design.md#the-flash-rate-is-guaranteed-by-construction)
 - **A flash changes the sky and ambient energy by a bump over a captured base and restores it exactly**; it never accumulates from frame to frame, and `allow_flashes`/`flash_scale` reach zero.
 - Call `advance()` yourself; nothing runs in `_process`.
-- A newly created node gets an auto name like `@WorldEnvironment@3`, so a `DotNodeRef` path to it needs `name` set first (the suite hit this).
+- A newly created node gets an auto name like `@WorldEnvironment@3`, so a `GSNodeRef` path to it needs `name` set first (the suite hit this).
 
 ## Open items
 
-- Two games carry their own per-zone weather (a tick-driven draw of sky, wind, storm and fog for gameplay grip); that is prior art this does not replace: they decide *what the weather is* in a zone (simulation), this draws *a* weather. Folding them in means a game converting its zone draw into a `DotWeatherDoc` per zone; the steps, with mg-dangerous-delivery as the worked example, are in docs/design.md ("Adopting it in a game with its own weather"); nightly item `weather-adopt` covers the remaining game.
-- Gusts reach GameSpice FX as a lean: `advance` hands `gust()` (wind minus the steady wind) to `DotFxWeather.set_gust` every frame.
+- Two games carry their own per-zone weather (a tick-driven draw of sky, wind, storm and fog for gameplay grip); that is prior art this does not replace: they decide *what the weather is* in a zone (simulation), this draws *a* weather. Folding them in means a game converting its zone draw into a `GSWeatherDoc` per zone; the steps, with mg-dangerous-delivery as the worked example, are in docs/design.md ("Adopting it in a game with its own weather"); nightly item `weather-adopt` covers the remaining game.
+- Gusts reach GameSpice FX as a lean: `advance` hands `gust()` (wind minus the steady wind) to `GSFxWeather.set_gust` every frame.

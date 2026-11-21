@@ -1,4 +1,4 @@
-class_name DotWeatherSchedule
+class_name GSWeatherSchedule
 extends RefCounted
 
 ## Lightning, thunder and wind as pure functions of (the document's seed, a time).
@@ -13,8 +13,8 @@ extends RefCounted
 ## joins late sees the same storm from its first frame, and seeking a replay is just a different
 ## [param t].
 ##
-## [b]Time is cut into slots[/b] of [member DotWeatherDoc.thunder_interval] seconds. Slot [code]n[/code]
-## holds at most one strike, present with probability [member DotWeatherDoc.thunder_chance], placed
+## [b]Time is cut into slots[/b] of [member GSWeatherDoc.thunder_interval] seconds. Slot [code]n[/code]
+## holds at most one strike, present with probability [member GSWeatherDoc.thunder_chance], placed
 ## between 25% and 75% of the way through its slot. A stateful countdown ("wait a random time, strike,
 ## repeat") cannot be asked about the middle of a match without simulating all of it, and its
 ## failure mode is the latch (one missed tick and it never fires again). A slot has no state to
@@ -27,7 +27,7 @@ extends RefCounted
 ## client sees it from where it stands: [method thunder_delay] differs per listener, and a player
 ## near the strike hears the thunder first.
 ##
-## All draws are indexed ([method DotRandomStream.unit_at]), so asking about slot 900 does not
+## All draws are indexed ([method GSRandomStream.unit_at]), so asking about slot 900 does not
 ## need slots 0 to 899, and asking twice gives the same answer.
 
 # Indices within a slot's block of draws. A block is 8 wide so a slot's draws never collide.
@@ -45,7 +45,7 @@ const LATEST := 0.75
 
 
 ## The slot number that contains [param t].
-static func slot_of(doc: DotWeatherDoc, t: float) -> int:
+static func slot_of(doc: GSWeatherDoc, t: float) -> int:
 	return floori(t / doc.thunder_interval)
 
 
@@ -54,7 +54,7 @@ static func slot_of(doc: DotWeatherDoc, t: float) -> int:
 ## [code]{"slot", "time", "position": Vector3, "distance": float (from the centre),
 ## "power": 0.5 to 1, "sound": StringName}[/code]. [code]sound[/code] is one of the document's
 ## thunder sound ids, picked by the same seed, or empty.
-static func strike(doc: DotWeatherDoc, n: int) -> Dictionary:
+static func strike(doc: GSWeatherDoc, n: int) -> Dictionary:
 	if not doc.has_thunder or n < 0:
 		return {}
 	var s := doc.stream()
@@ -81,7 +81,7 @@ static func strike(doc: DotWeatherDoc, n: int) -> Dictionary:
 
 
 ## Every strike whose time is in ([param t0], [param t1]], in order.
-static func strikes_between(doc: DotWeatherDoc, t0: float, t1: float) -> Array[Dictionary]:
+static func strikes_between(doc: GSWeatherDoc, t0: float, t1: float) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if not doc.has_thunder or t1 <= t0:
 		return out
@@ -93,20 +93,20 @@ static func strikes_between(doc: DotWeatherDoc, t0: float, t1: float) -> Array[D
 
 
 ## Seconds from a flash until its thunder reaches [param listener].
-static func thunder_delay(doc: DotWeatherDoc, st: Dictionary, listener: Vector3) -> float:
+static func thunder_delay(doc: GSWeatherDoc, st: Dictionary, listener: Vector3) -> float:
 	return listener.distance_to(st["position"]) / doc.speed_of_sound
 
 
 ## The longest a thunder can lag its flash for any listener within the document's range of the
 ## centre plus [param reach] metres, for sizing the look-back window of [method thunders_between].
-static func max_delay(doc: DotWeatherDoc, reach: float = 2000.0) -> float:
+static func max_delay(doc: GSWeatherDoc, reach: float = 2000.0) -> float:
 	return (doc.thunder_max_distance + reach + doc.thunder_height) / doc.speed_of_sound
 
 
 ## Strikes whose thunder reaches [param listener] in ([param t0], [param t1]]: the flash was
 ## earlier, by the distance over the speed of sound. Each is the strike dictionary plus
 ## [code]"delay"[/code] and [code]"listener_distance"[/code].
-static func thunders_between(doc: DotWeatherDoc, listener: Vector3, t0: float, t1: float) -> Array[Dictionary]:
+static func thunders_between(doc: GSWeatherDoc, listener: Vector3, t0: float, t1: float) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if not doc.has_thunder or t1 <= t0:
 		return out
@@ -124,7 +124,7 @@ static func thunders_between(doc: DotWeatherDoc, listener: Vector3, t0: float, t
 ## How bright the flash of [param st] is at time [param t], 0 to 1 (times the strike's power):
 ## a sharp rise, a fall, and a second weaker flicker 0.14 s later, which is what lightning
 ## looks like and what a single smooth pulse does not. Zero outside the flash.
-static func flash_envelope(doc: DotWeatherDoc, st: Dictionary, t: float) -> float:
+static func flash_envelope(doc: GSWeatherDoc, st: Dictionary, t: float) -> float:
 	var d: float = t - float(st["time"])
 	if d < 0.0 or d > doc.flash_duration:
 		return 0.0
@@ -139,7 +139,7 @@ static func flash_envelope(doc: DotWeatherDoc, st: Dictionary, t: float) -> floa
 ## [param listener] dims strikes far from it (a flash far off lights the sky less); leave it
 ## [constant Vector3.INF] for the same brightness for everyone.
 ## Returns [code]{"level": float, "strike": Dictionary}[/code].
-static func flash_at(doc: DotWeatherDoc, t: float, listener: Vector3 = Vector3.INF) -> Dictionary:
+static func flash_at(doc: GSWeatherDoc, t: float, listener: Vector3 = Vector3.INF) -> Dictionary:
 	var best := {"level": 0.0, "strike": {}}
 	for st in strikes_between(doc, t - doc.flash_duration - 0.001, t):
 		var level := flash_envelope(doc, st, t)
@@ -151,14 +151,14 @@ static func flash_at(doc: DotWeatherDoc, t: float, listener: Vector3 = Vector3.I
 
 
 ## Brightness and loudness factor for a strike [param metres] away: 1 close, down to 0.2 far.
-static func distance_dim(doc: DotWeatherDoc, metres: float) -> float:
+static func distance_dim(doc: GSWeatherDoc, metres: float) -> float:
 	return clampf(1.0 - metres / (doc.thunder_max_distance * 1.5), 0.2, 1.0)
 
 
 ## The wind at time [param t]: the document's vector times one plus the gust. A gust is the
 ## positive part of two slow sines beating against each other, so gusts come and go unevenly
 ## and are never negative. A function of time and seed, so every client's trees lean together.
-static func wind_at(doc: DotWeatherDoc, t: float) -> Vector3:
+static func wind_at(doc: GSWeatherDoc, t: float) -> Vector3:
 	if not doc.has_wind:
 		return Vector3.ZERO
 	var phase := doc.stream().unit_at(1 << 40) * TAU

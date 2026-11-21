@@ -1,13 +1,13 @@
-class_name DotWeather
+class_name GSWeather
 extends Node3D
 
-## A map's everyday weather, from a [DotWeatherDoc]: add the node, [method apply] the document,
+## A map's everyday weather, from a [GSWeatherDoc]: add the node, [method apply] the document,
 ## call [method advance] once a frame.
 ##
 ## [codeblock]
-## var w := DotWeather.new()
+## var w := GSWeather.new()
 ## add_child(w)
-## var res := w.apply(map_document["weather"])        # a DotResult; a bad document leaves it off
+## var res := w.apply(map_document["weather"])        # a GSResult; a bad document leaves it off
 ## w.lightning.connect(func(strike, level): ...)       # a game may add a light, a sound, a shake
 ## w.thunder.connect(func(sound, strike, metres, loudness): audio.play(sound, loudness))
 ## # once a frame, with the camera and the clock every client shares:
@@ -23,7 +23,7 @@ extends Node3D
 ## addons are reached by path and API level ([method fx_available], [method lighting_available]).
 ##
 ## [b]Lightning is not networked.[/b] [method advance] takes the shared match time, and the strikes
-## are a function of the document's seed and that time ([DotWeatherSchedule]). Pass a negative
+## are a function of the document's seed and that time ([GSWeatherSchedule]). Pass a negative
 ## [param match_time] (the default) and the node counts its own clock from zero, which is right
 ## for a single-player game and wrong for anything that must agree.
 ##
@@ -48,7 +48,7 @@ const LIGHTING_LEVEL := 6
 const MAX_STEP := 5.0
 
 ## Emitted once at the moment a strike's flash begins, whatever the quality or accessibility
-## settings (a game may still want the event). [param strike] is a [DotWeatherSchedule] strike.
+## settings (a game may still want the event). [param strike] is a [GSWeatherSchedule] strike.
 signal lightning(strike: Dictionary, level: float)
 
 ## Emitted when a strike's thunder reaches the camera: flash time plus distance over the speed of
@@ -65,15 +65,15 @@ signal ambience_changed(ids: Dictionary)
 signal ambience_inside_changed(inside: bool)
 
 ## The world's [WorldEnvironment]. Empty finds the viewport's own environment.
-@export var environment_ref: DotNodeRef = null
+@export var environment_ref: GSNodeRef = null
 
 ## The camera [method advance_with_camera] follows.
-@export var camera_ref: DotNodeRef = null
+@export var camera_ref: GSNodeRef = null
 
 ## Quality and accessibility. A game assigns its own, or lets [method apply_config] do it.
-@export var config: DotWeatherConfig = DotWeatherConfig.new()
+@export var config: GSWeatherConfig = GSWeatherConfig.new()
 
-var doc: DotWeatherDoc = null
+var doc: GSWeatherDoc = null
 
 var _fx: Node3D = null
 var _fx_quality: int = -1
@@ -99,48 +99,48 @@ var _bolt_slot: int = -1
 
 ## Whether GameSpice FX is in this build at a level that has the weather node.
 static func fx_available() -> bool:
-	return DotAddonApi.build_level("dot_fx") >= FX_LEVEL
+	return GSAddonApi.build_level("dot_fx") >= FX_LEVEL
 
 
 ## Whether GameSpice Lighting is in this build at a level that can write fog onto an environment.
 static func lighting_available() -> bool:
-	return DotAddonApi.build_level("dot_lighting") >= LIGHTING_LEVEL
+	return GSAddonApi.build_level("dot_lighting") >= LIGHTING_LEVEL
 
 
 ## Whether this process can draw. False on a dedicated server or any headless run.
 static func can_render() -> bool:
-	return not DotPlatform.is_headless()
+	return not GSPlatform.is_headless()
 
 
 ## Takes the quality tier and accessibility switches from [param cfg].
-func apply_config(cfg: DotWeatherConfig) -> void:
+func apply_config(cfg: GSWeatherConfig) -> void:
 	config = cfg
 
 
-## Validates [param data] (a dictionary, or an already parsed [DotWeatherDoc]) and sets up from
+## Validates [param data] (a dictionary, or an already parsed [GSWeatherDoc]) and sets up from
 ## it. A bad document is refused with a WARN and leaves the previous weather alone.
-func apply(data: Variant) -> DotResult:
-	var parsed: DotWeatherDoc = null
-	if data is DotWeatherDoc:
+func apply(data: Variant) -> GSResult:
+	var parsed: GSWeatherDoc = null
+	if data is GSWeatherDoc:
 		parsed = data
 	elif data is Dictionary:
-		var floor_s: float = config.min_thunder_interval if config != null else DotWeatherDoc.MIN_INTERVAL
-		var res := DotWeatherDoc.parse(data, floor_s)
+		var floor_s: float = config.min_thunder_interval if config != null else GSWeatherDoc.MIN_INTERVAL
+		var res := GSWeatherDoc.parse(data, floor_s)
 		if not res.ok:
-			DotLog.warn(CHANNEL, "weather document refused", {"why": res.error.message})
+			GSLog.warn(CHANNEL, "weather document refused", {"why": res.error.message})
 			return res
 		parsed = res.value
-		if parsed.has_thunder and parsed.thunder_interval < DotWeatherDoc.MIN_INTERVAL:
-			DotLog.warn(CHANNEL, "thunder faster than the photosensitivity floor (min_thunder_interval lowered)",
-				{"mean_interval": parsed.thunder_interval, "default_floor": DotWeatherDoc.MIN_INTERVAL})
+		if parsed.has_thunder and parsed.thunder_interval < GSWeatherDoc.MIN_INTERVAL:
+			GSLog.warn(CHANNEL, "thunder faster than the photosensitivity floor (min_thunder_interval lowered)",
+				{"mean_interval": parsed.thunder_interval, "default_floor": GSWeatherDoc.MIN_INTERVAL})
 	else:
-		return DotResult.fail(DotError.CODE_INVALID, "weather: apply() takes a Dictionary or a DotWeatherDoc")
+		return GSResult.fail(GSError.CODE_INVALID, "weather: apply() takes a Dictionary or a GSWeatherDoc")
 	setup(parsed)
-	return DotResult.success(parsed)
+	return GSResult.success(parsed)
 
 
 ## Uses [param d]. Replaces whatever weather was set up, restoring the fog first.
-func setup(d: DotWeatherDoc) -> void:
+func setup(d: GSWeatherDoc) -> void:
 	_teardown()
 	doc = d
 	_have_t = false
@@ -148,7 +148,7 @@ func setup(d: DotWeatherDoc) -> void:
 	_fog_dirty = d.has_fog
 	if d.has_precipitation:
 		_build_fx()
-	DotLog.info(CHANNEL, "weather set", {"doc": d.describe(), "fx": _fx != null, "fog_via": "dot-lighting" if lighting_available() else "plain"})
+	GSLog.info(CHANNEL, "weather set", {"doc": d.describe(), "fx": _fx != null, "fog_via": "dot-lighting" if lighting_available() else "plain"})
 	ambience_changed.emit({"loop": d.ambience_loop, "wind": d.ambience_wind} if d.has_ambience else {})
 
 
@@ -170,7 +170,7 @@ func advance(delta: float, camera_pos: Vector3, match_time: float = -1.0) -> voi
 	else:
 		_clock += delta
 		_time = _clock
-	_wind = DotWeatherSchedule.wind_at(doc, _time)
+	_wind = GSWeatherSchedule.wind_at(doc, _time)
 	_sync_fx(delta, camera_pos)
 	_apply_fog()
 	_events(camera_pos)
@@ -225,7 +225,7 @@ func describe() -> String:
 
 func _build_fx() -> void:
 	if not fx_available() or not can_render():
-		DotLog.debug(CHANNEL, "precipitation kept, not drawn", {"fx": fx_available(), "display": can_render()})
+		GSLog.debug(CHANNEL, "precipitation kept, not drawn", {"fx": fx_available(), "display": can_render()})
 		return
 	var script: Script = load(_FX_SCRIPT)
 	_fx = script.new() as Node3D
@@ -233,8 +233,8 @@ func _build_fx() -> void:
 	_fx_quality = -1
 	_fx_density = -1.0
 	var res: Variant = _fx.call("apply", doc.precipitation_dict())
-	if res is DotResult and not (res as DotResult).ok:
-		DotLog.warn(CHANNEL, "dot-fx refused the precipitation", {"why": (res as DotResult).error.message})
+	if res is GSResult and not (res as GSResult).ok:
+		GSLog.warn(CHANNEL, "dot-fx refused the precipitation", {"why": (res as GSResult).error.message})
 		_fx.queue_free()
 		_fx = null
 		return
@@ -267,7 +267,7 @@ func _find_env() -> Environment:
 			return we.environment
 		if not _ref_warned:
 			_ref_warned = true
-			DotLog.warn(CHANNEL, "environment_ref found no WorldEnvironment with an Environment; using the viewport's", {"ref": environment_ref.describe()})
+			GSLog.warn(CHANNEL, "environment_ref found no WorldEnvironment with an Environment; using the viewport's", {"ref": environment_ref.describe()})
 	var w := get_viewport().find_world_3d() if get_viewport() != null else null
 	return w.environment if w != null else null
 
@@ -279,7 +279,7 @@ func _apply_fog() -> void:
 	if env == null:
 		if not _env_warned:
 			_env_warned = true
-			DotLog.warn(CHANNEL, "no world environment to write fog onto; the fog waits for one (weather never makes a second)")
+			GSLog.warn(CHANNEL, "no world environment to write fog onto; the fog waits for one (weather never makes a second)")
 		return
 	_env = env
 	_fog_saved = _snapshot_fog(env)
@@ -317,10 +317,10 @@ static func _snapshot_fog(env: Environment) -> Dictionary:
 func _events(camera_pos: Vector3) -> void:
 	var t := _time
 	if _have_t and t > _last_t and t - _last_t <= MAX_STEP:
-		for st in DotWeatherSchedule.strikes_between(doc, _last_t, t):
-			lightning.emit(st, DotWeatherSchedule.flash_envelope(doc, st, t))
-		for th in DotWeatherSchedule.thunders_between(doc, camera_pos, _last_t, t):
-			thunder.emit(th["sound"], th, th["listener_distance"], DotWeatherSchedule.distance_dim(doc, th["listener_distance"]))
+		for st in GSWeatherSchedule.strikes_between(doc, _last_t, t):
+			lightning.emit(st, GSWeatherSchedule.flash_envelope(doc, st, t))
+		for th in GSWeatherSchedule.thunders_between(doc, camera_pos, _last_t, t):
+			thunder.emit(th["sound"], th, th["listener_distance"], GSWeatherSchedule.distance_dim(doc, th["listener_distance"]))
 	_last_t = t
 	_have_t = true
 
@@ -338,7 +338,7 @@ func _update_flash(camera_pos: Vector3) -> void:
 		_end_flash()
 		return
 	_env = env
-	var f := DotWeatherSchedule.flash_at(doc, _time, camera_pos)
+	var f := GSWeatherSchedule.flash_at(doc, _time, camera_pos)
 	var level: float = f["level"] * config.flash_scale
 	_flash_level = level
 	if level <= 0.0:
@@ -386,7 +386,7 @@ func _draw_bolt(st: Dictionary, camera_pos: Vector3, level: float) -> void:
 		var ground: Vector3 = st["position"]
 		var top := ground + Vector3.UP * doc.thunder_height
 		var metres := camera_pos.distance_to(ground)
-		_bolt.mesh = DotWeatherBolt.mesh(DotWeatherBolt.points(doc, st, top, ground), camera_pos, 0.25 + metres * 0.006)
+		_bolt.mesh = GSWeatherBolt.mesh(GSWeatherBolt.points(doc, st, top, ground), camera_pos, 0.25 + metres * 0.006)
 	_bolt.visible = true
 
 

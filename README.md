@@ -18,9 +18,9 @@ A dedicated server with neither still parses documents, runs the lightning sched
 ## Use
 
 ```gdscript
-var weather := DotWeather.new()
+var weather := GSWeather.new()
 add_child(weather)
-var res := weather.apply(map_document["weather"])      # a DotResult; a bad document is refused and names the key
+var res := weather.apply(map_document["weather"])      # a GSResult; a bad document is refused and names the key
 weather.lightning.connect(func(strike, level): ...)     # add a sound, a light, a shake
 weather.thunder.connect(func(sound, strike, metres, loudness): audio.play(sound, loudness))
 weather.ambience_changed.connect(func(ids): ...)        # {"loop": id, "wind": id}: start your own loops
@@ -52,9 +52,9 @@ Strikes are a pure function of the document's seed and the shared match time you
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `DotWeatherConfig.allow_flashes` | true | Turn lightning flashes off. |
-| `DotWeatherConfig.flash_scale` | 1.0 | Scale flash brightness, down to 0. |
-| `DotWeatherConfig.min_thunder_interval` | 3.0 | Shortest thunder `mean_interval` a document may ask for. Default 3 s, any value; 0 is no floor. Negative is refused. |
+| `GSWeatherConfig.allow_flashes` | true | Turn lightning flashes off. |
+| `GSWeatherConfig.flash_scale` | 1.0 | Scale flash brightness, down to 0. |
+| `GSWeatherConfig.min_thunder_interval` | 3.0 | Shortest thunder `mean_interval` a document may ask for. Default 3 s, any value; 0 is no floor. Negative is refused. |
 
 To keep to the guidance of no more than three general flashes per second, by default a document with a `mean_interval` under 3 seconds is refused. That is an accessibility default, not a limit: an operator who lowers `min_thunder_interval` gets the faster storm, with a warning logged each time one is applied. There is no upper limit on the interval.
 

@@ -1,4 +1,4 @@
-class_name DotWeatherBolt
+class_name GSWeatherBolt
 extends RefCounted
 
 ## The mesh of a visible lightning bolt: a jagged ribbon from cloud to ground with two branches,
@@ -13,7 +13,7 @@ const SEGMENTS := 18
 
 ## The polyline of the main trunk and two branches as arrays of points, from [param top] down to
 ## [param bottom]. Deterministic in [param doc] and [param st].
-static func points(doc: DotWeatherDoc, st: Dictionary, top: Vector3, bottom: Vector3) -> Array[PackedVector3Array]:
+static func points(doc: GSWeatherDoc, st: Dictionary, top: Vector3, bottom: Vector3) -> Array[PackedVector3Array]:
 	var s := doc.stream().stream_for(&"bolt", int(st["slot"]))
 	var trunk := PackedVector3Array()
 	var length := top.distance_to(bottom)

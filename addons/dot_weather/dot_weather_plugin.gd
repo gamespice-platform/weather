@@ -8,8 +8,8 @@ extends EditorPlugin
 
 
 func _enter_tree() -> void:
-	add_custom_type("DotWeather", "Node3D", load("res://addons/dot_weather/runtime/dot_weather.gd"), null)
+	add_custom_type("GSWeather", "Node3D", load("res://addons/dot_weather/runtime/dot_weather.gd"), null)
 
 
 func _exit_tree() -> void:
-	remove_custom_type("DotWeather")
+	remove_custom_type("GSWeather")

@@ -1,9 +1,9 @@
 extends Node3D
 
-## Snow, rain with lightning, and fog on a small stage, through DotWeather and nothing else.
+## Snow, rain with lightning, and fog on a small stage, through GSWeather and nothing else.
 ##
 ## Run it under a display; headless it draws nothing, which is the point of
-## [method DotWeather.can_render].
+## [method GSWeather.can_render].
 ##
 ## [codeblock]
 ## godot --path . res://examples/weather_demo.tscn -- --mode rain
@@ -16,7 +16,7 @@ extends Node3D
 
 const STEP := 1.0 / 60.0
 
-var _weather := DotWeather.new()
+var _weather := GSWeather.new()
 var _cam := Camera3D.new()
 var _env := Environment.new()
 var _mode := "rain"
@@ -27,7 +27,7 @@ var _fixed_time := false
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	var args := OS.get_cmdline_user_args()
 	for i in range(args.size()):
 		if args[i] == "--mode" and i + 1 < args.size():
@@ -49,7 +49,7 @@ func _ready() -> void:
 
 	_build_stage()
 
-	_weather.environment_ref = DotNodeRef.of_path(NodePath("../WorldEnvironment"))
+	_weather.environment_ref = GSNodeRef.of_path(NodePath("../WorldEnvironment"))
 	add_child(_weather)
 	_weather.lightning.connect(func(st: Dictionary, _l: float) -> void: print("lightning slot ", st["slot"], " at ", st["position"]))
 	_weather.thunder.connect(func(snd: StringName, _st: Dictionary, m: float, loud: float) -> void: print("thunder ", snd, " ", int(m), " m, loudness ", snappedf(loud, 0.01)))
@@ -85,8 +85,8 @@ func _set_mode(mode: String) -> void:
 	if _fixed_time:
 		for sd in range(1, 400):
 			doc["seed"] = sd
-			var d := DotWeatherDoc.parse(doc).value as DotWeatherDoc
-			var st := DotWeatherSchedule.strike(d, 2)
+			var d := GSWeatherDoc.parse(doc).value as GSWeatherDoc
+			var st := GSWeatherSchedule.strike(d, 2)
 			if st["position"].z < -70.0 and absf(st["position"].x) < 18.0:
 				_base_time = st["time"] + 0.05 - 90.0 * STEP
 				break
