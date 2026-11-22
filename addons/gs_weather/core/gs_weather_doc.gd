@@ -197,7 +197,7 @@ func precipitation_dict() -> Dictionary:
 ## The seeded stream every schedule draw comes from. Indexed draws advance nothing.
 func stream() -> GSRandomStream:
 	if _stream == null:
-		_stream = GSRandomStream.new(seed_value, &"dot_weather")  # a seed key, not a name: renaming it changes every seeded sky
+		_stream = GSRandomStream.new(seed_value, &"gs_weather")  # a seed key, not a name: renaming it changes every seeded sky
 	return _stream
 
 
