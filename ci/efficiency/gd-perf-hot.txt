@@ -1,0 +1,11 @@
+# Runtime scripts checked by gs-ci scripts/check-gd-perf.py (tools/gd_perf_lint.py).
+# One fnmatch glob per line over tracked paths. Baseline: ci/efficiency/gd-perf.tsv.
+addons/gs_weather/core/gs_weather_config.gd
+addons/gs_weather/core/gs_weather_doc.gd
+addons/gs_weather/core/gs_weather_schedule.gd
+addons/gs_weather/gs_weather_api.gd
+addons/gs_weather/runtime/gs_weather.gd
+addons/gs_weather/runtime/gs_weather_bolt.gd
+
+# Run once or per event (document parse/serialise, fog written only when dirty, teardown), not per frame:
+cold+: ^(from_.*|describe.*|specs|cvar_specs|_absorb_specs|set_cvar|follow_cvars|validate.*|presets|properties|standard_pair|restore|_restore_.*|to_config|parse_.*|_parse_.*|find_spot|_arr|_unknown|parse|to_dict|precipitation_dict|_snapshot_fog|_apply_fog|_teardown|apply)$

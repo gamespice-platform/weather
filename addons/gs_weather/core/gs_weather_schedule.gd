@@ -55,29 +55,56 @@ static func slot_of(doc: GSWeatherDoc, t: float) -> int:
 ## "power": 0.5 to 1, "sound": StringName}[/code]. [code]sound[/code] is one of the document's
 ## thunder sound ids, picked by the same seed, or empty.
 static func strike(doc: GSWeatherDoc, n: int) -> Dictionary:
-	if not doc.has_thunder or n < 0:
+	var time := strike_time(doc, n)
+	if time < 0.0:
 		return {}
 	var s := doc.stream()
 	var base := n * _BLOCK
-	if not s.chance_at(base + _PRESENT, doc.thunder_chance):
-		return {}
-	var angle := s.unit_at(base + _ANGLE) * TAU
-	# Square root so strikes spread over the ring's area, not crowd the inner edge.
-	var u := s.unit_at(base + _DISTANCE)
-	var lo2 := doc.thunder_min_distance * doc.thunder_min_distance
-	var hi2 := doc.thunder_max_distance * doc.thunder_max_distance
-	var dist := sqrt(lo2 + u * (hi2 - lo2))
 	var sound: StringName = &""
 	if not doc.ambience_thunder.is_empty():
 		sound = doc.ambience_thunder[s.range_i_at(base + _SOUND, 0, doc.ambience_thunder.size() - 1)]
-	return {
+	var pos := strike_position(doc, n)
+	return {  # perf-lint: allow alloc one per strike, built only for slots that strike in the window
 		"slot": n,
-		"time": (float(n) + EARLIEST + s.unit_at(base + _OFFSET) * (LATEST - EARLIEST)) * doc.thunder_interval,
-		"position": doc.thunder_centre + Vector3(cos(angle) * dist, 0.0, sin(angle) * dist),
-		"distance": dist,
-		"power": 0.5 + 0.5 * s.unit_at(base + _POWER),
+		"time": time,
+		"position": pos,
+		"distance": _strike_dist(doc, n),
+		"power": strike_power(doc, n),
 		"sound": sound,
 	}
+
+
+## When slot [param n] strikes, or -1 when it has no strike. Allocates nothing, so per-frame
+## scans test slots with this and build [method strike] only for the ones that hit.
+static func strike_time(doc: GSWeatherDoc, n: int) -> float:
+	if not doc.has_thunder or n < 0:
+		return -1.0
+	var s := doc.stream()
+	var base := n * _BLOCK
+	if not s.chance_at(base + _PRESENT, doc.thunder_chance):
+		return -1.0
+	return (float(n) + EARLIEST + s.unit_at(base + _OFFSET) * (LATEST - EARLIEST)) * doc.thunder_interval
+
+
+## Where slot [param n] strikes (only meaningful when [method strike_time] is not -1).
+static func strike_position(doc: GSWeatherDoc, n: int) -> Vector3:
+	var s := doc.stream()
+	var base := n * _BLOCK
+	var angle := s.unit_at(base + _ANGLE) * TAU
+	var dist := _strike_dist(doc, n)
+	return doc.thunder_centre + Vector3(cos(angle) * dist, 0.0, sin(angle) * dist)
+
+
+static func _strike_dist(doc: GSWeatherDoc, n: int) -> float:
+	# Square root so strikes spread over the ring's area, not crowd the inner edge.
+	var u := doc.stream().unit_at(n * _BLOCK + _DISTANCE)
+	var lo2 := doc.thunder_min_distance * doc.thunder_min_distance
+	var hi2 := doc.thunder_max_distance * doc.thunder_max_distance
+	return sqrt(lo2 + u * (hi2 - lo2))
+
+
+static func strike_power(doc: GSWeatherDoc, n: int) -> float:
+	return 0.5 + 0.5 * doc.stream().unit_at(n * _BLOCK + _POWER)
 
 
 ## Every strike whose time is in ([param t0], [param t1]], in order.
@@ -85,10 +112,13 @@ static func strikes_between(doc: GSWeatherDoc, t0: float, t1: float) -> Array[Di
 	var out: Array[Dictionary] = []
 	if not doc.has_thunder or t1 <= t0:
 		return out
-	for n in range(maxi(slot_of(doc, t0), 0), slot_of(doc, t1) + 1):
-		var st := strike(doc, n)
-		if not st.is_empty() and st["time"] > t0 and st["time"] <= t1:
-			out.append(st)
+	var n := maxi(slot_of(doc, t0), 0)
+	var last := slot_of(doc, t1)
+	while n <= last:
+		var tm := strike_time(doc, n)
+		if tm > t0 and tm <= t1:
+			out.append(strike(doc, n))
+		n += 1
 	return out
 
 
@@ -110,13 +140,21 @@ static func thunders_between(doc: GSWeatherDoc, listener: Vector3, t0: float, t1
 	var out: Array[Dictionary] = []
 	if not doc.has_thunder or t1 <= t0:
 		return out
-	for st in strikes_between(doc, t0 - max_delay(doc), t1):
-		var delay := thunder_delay(doc, st, listener)
-		var arrives: float = st["time"] + delay
+	var t_lo := t0 - max_delay(doc)
+	var n := maxi(slot_of(doc, t_lo), 0)
+	var last := slot_of(doc, t1)
+	while n <= last:
+		var tm := strike_time(doc, n)
+		n += 1
+		if tm <= t_lo or tm > t1:
+			continue
+		var metres := listener.distance_to(strike_position(doc, n - 1))
+		var delay := metres / doc.speed_of_sound
+		var arrives := tm + delay
 		if arrives > t0 and arrives <= t1:
-			var item := st.duplicate()
+			var item := strike(doc, n - 1)
 			item["delay"] = delay
-			item["listener_distance"] = listener.distance_to(st["position"])
+			item["listener_distance"] = metres
 			out.append(item)
 	return out
 
@@ -125,14 +163,17 @@ static func thunders_between(doc: GSWeatherDoc, listener: Vector3, t0: float, t1
 ## a sharp rise, a fall, and a second weaker flicker 0.14 s later, which is what lightning
 ## looks like and what a single smooth pulse does not. Zero outside the flash.
 static func flash_envelope(doc: GSWeatherDoc, st: Dictionary, t: float) -> float:
-	var d: float = t - float(st["time"])
+	return _envelope(doc, t - float(st["time"]), float(st["power"]))
+
+
+static func _envelope(doc: GSWeatherDoc, d: float, power: float) -> float:
 	if d < 0.0 or d > doc.flash_duration:
 		return 0.0
 	var k := doc.flash_duration * 0.2
 	var main := smoothstep(0.0, 0.02, d) * exp(-d / k)
 	var d2 := d - 0.14
 	var flicker := 0.6 * smoothstep(0.0, 0.02, d2) * exp(-d2 / k) if d2 > 0.0 else 0.0
-	return clampf(main + flicker, 0.0, 1.0) * float(st["power"])
+	return clampf(main + flicker, 0.0, 1.0) * power
 
 
 ## The strongest flash at time [param t] among all strikes, 0 to 1, and the strike behind it.
@@ -140,14 +181,41 @@ static func flash_envelope(doc: GSWeatherDoc, st: Dictionary, t: float) -> float
 ## [constant Vector3.INF] for the same brightness for everyone.
 ## Returns [code]{"level": float, "strike": Dictionary}[/code].
 static func flash_at(doc: GSWeatherDoc, t: float, listener: Vector3 = Vector3.INF) -> Dictionary:
-	var best := {"level": 0.0, "strike": {}}
-	for st in strikes_between(doc, t - doc.flash_duration - 0.001, t):
-		var level := flash_envelope(doc, st, t)
-		if listener != Vector3.INF:
-			level *= distance_dim(doc, listener.distance_to(st["position"]))
-		if level > best["level"]:
-			best = {"level": level, "strike": st}
+	var n := brightest_slot(doc, t, listener)
+	if n < 0:
+		return {"level": 0.0, "strike": {}}
+	return {"level": slot_level(doc, n, t, listener), "strike": strike(doc, n)}
+
+
+## The slot of the strongest flash at [param t] ([method flash_at] without allocating), or -1.
+static func brightest_slot(doc: GSWeatherDoc, t: float, listener: Vector3 = Vector3.INF) -> int:
+	if not doc.has_thunder:
+		return -1
+	var t0 := t - doc.flash_duration - 0.001
+	var n := maxi(slot_of(doc, t0), 0)
+	var last := slot_of(doc, t)
+	var best := -1
+	var best_level := 0.0
+	while n <= last:
+		var tm := strike_time(doc, n)
+		if tm > t0 and tm <= t:
+			var level := slot_level(doc, n, t, listener)
+			if level > best_level:
+				best_level = level
+				best = n
+		n += 1
 	return best
+
+
+## Flash brightness of slot [param n] at [param t], dimmed by distance from [param listener].
+static func slot_level(doc: GSWeatherDoc, n: int, t: float, listener: Vector3 = Vector3.INF) -> float:
+	var tm := strike_time(doc, n)
+	if tm < 0.0:
+		return 0.0
+	var level := _envelope(doc, t - tm, strike_power(doc, n))
+	if listener != Vector3.INF:
+		level *= distance_dim(doc, listener.distance_to(strike_position(doc, n)))
+	return level
 
 
 ## Brightness and loudness factor for a strike [param metres] away: 1 close, down to 0.2 far.

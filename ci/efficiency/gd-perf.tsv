@@ -1,0 +1,26 @@
+# gd-perf
+# Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
+addons/gs_weather/core/gs_weather_doc.gd::_arr::untyped_array	1
+addons/gs_weather/core/gs_weather_doc.gd::_parse_ambience::untyped_array	1
+addons/gs_weather/core/gs_weather_doc.gd::_parse_fog::untyped_array	1
+addons/gs_weather/core/gs_weather_doc.gd::_parse_precipitation::untyped_array	1
+addons/gs_weather/core/gs_weather_doc.gd::_parse_thunder::untyped_array	1
+addons/gs_weather/core/gs_weather_doc.gd::_parse_wind::untyped_array	1
+addons/gs_weather/core/gs_weather_doc.gd::_unknown::untyped_array	1
+addons/gs_weather/core/gs_weather_doc.gd::parse::untyped_array	1
+addons/gs_weather/core/gs_weather_doc.gd::precipitation_dict::untyped_array	2
+addons/gs_weather/core/gs_weather_doc.gd::to_dict::untyped_array	3
+addons/gs_weather/core/gs_weather_schedule.gd::flash_at::alloc	2
+addons/gs_weather/core/gs_weather_schedule.gd::flash_at::untyped_array	1
+addons/gs_weather/core/gs_weather_schedule.gd::flash_envelope::untyped_array	1
+addons/gs_weather/core/gs_weather_schedule.gd::strike::alloc	1
+addons/gs_weather/core/gs_weather_schedule.gd::strike::untyped_array	1
+addons/gs_weather/core/gs_weather_schedule.gd::strikes_between::alloc	1
+addons/gs_weather/core/gs_weather_schedule.gd::thunder_delay::untyped_array	1
+addons/gs_weather/core/gs_weather_schedule.gd::thunders_between::alloc	1
+addons/gs_weather/runtime/gs_weather.gd::<members>::untyped_array	1
+addons/gs_weather/runtime/gs_weather.gd::_find_env::alloc	1
+addons/gs_weather/runtime/gs_weather.gd::_snapshot_fog::untyped_array	1
+addons/gs_weather/runtime/gs_weather_bolt.gd::mesh::alloc	2
+addons/gs_weather/runtime/gs_weather_bolt.gd::points::alloc	1
+addons/gs_weather/runtime/gs_weather_bolt.gd::points::untyped_array	1

@@ -75,7 +75,10 @@ signal ambience_inside_changed(inside: bool)
 
 var doc: GSWeatherDoc = null
 
-var _fx: Node3D = null
+var _fx: Node3D = null:
+	set(value):
+		_fx = value
+		_fx_has_gust = value != null and value.has_method("set_gust")  # perf-lint: allow dynamic_call once per fx swap, caches the answer for the frame loop
 var _fx_quality: int = -1
 var _fx_density: float = -1.0
 var _clock: float = 0.0
@@ -91,7 +94,10 @@ var _env_warned: bool = false
 var _ref_warned: bool = false
 
 var _flashing: bool = false
-var _flash_base: Dictionary = {}
+var _flash_base_bg: float = 0.0
+var _flash_base_amb: float = 0.0
+# Cached once gs-fx is built, so advance() does no per-frame has_method lookup.
+var _fx_has_gust: bool = false
 var _flash_level: float = 0.0
 var _bolt: MeshInstance3D = null
 var _bolt_slot: int = -1
@@ -248,13 +254,14 @@ func _sync_fx(delta: float, camera_pos: Vector3) -> void:
 	# GameSpice FX marks itself dirty on every set, so only touch it when something changed.
 	if config.quality != _fx_quality:
 		_fx_quality = config.quality
-		_fx.set("quality", config.quality)
+		_fx.set("quality", config.quality)  # perf-lint: allow dynamic_call only when the setting changed
 	if not is_equal_approx(config.density_scale, _fx_density):
 		_fx_density = config.density_scale
-		_fx.set("density_scale", config.density_scale)
-	if _fx.has_method("set_gust"):
-		_fx.call("set_gust", gust())
-	_fx.call("advance", delta, camera_pos)
+		_fx.set("density_scale", config.density_scale)  # perf-lint: allow dynamic_call only when the setting changed
+	# gs-fx is optional and has no class_name here, so it is driven by name.
+	if _fx_has_gust:
+		_fx.call("set_gust", gust())  # perf-lint: allow dynamic_call optional addon without class_name
+	_fx.call("advance", delta, camera_pos)  # perf-lint: allow dynamic_call optional addon without class_name
 
 
 func _find_env() -> Environment:
@@ -317,12 +324,21 @@ static func _snapshot_fog(env: Environment) -> Dictionary:
 func _events(camera_pos: Vector3) -> void:
 	var t := _time
 	if _have_t and t > _last_t and t - _last_t <= MAX_STEP:
-		for st in GSWeatherSchedule.strikes_between(doc, _last_t, t):
-			lightning.emit(st, GSWeatherSchedule.flash_envelope(doc, st, t))
-		for th in GSWeatherSchedule.thunders_between(doc, camera_pos, _last_t, t):
-			thunder.emit(th["sound"], th, th["listener_distance"], GSWeatherSchedule.distance_dim(doc, th["listener_distance"]))
+		_emit_strikes(_last_t, t, camera_pos)
 	_last_t = t
 	_have_t = true
+
+
+# Split from _events so the per-frame path stays a time compare: the lists are only built
+# when a doc has thunder, and they hold a strike only on the frame it happens.
+func _emit_strikes(t0: float, t: float, camera_pos: Vector3) -> void:
+	if not doc.has_thunder:
+		return
+	for st: Dictionary in GSWeatherSchedule.strikes_between(doc, t0, t):
+		lightning.emit(st, GSWeatherSchedule.flash_envelope(doc, st, t))  # perf-lint: allow emit_in_loop one event per strike
+	for th: Dictionary in GSWeatherSchedule.thunders_between(doc, camera_pos, t0, t):
+		var metres: float = th["listener_distance"]
+		thunder.emit(th["sound"], th, metres, GSWeatherSchedule.distance_dim(doc, metres))  # perf-lint: allow emit_in_loop one event per thunder
 
 
 func _flash_allowed() -> bool:
@@ -338,33 +354,36 @@ func _update_flash(camera_pos: Vector3) -> void:
 		_end_flash()
 		return
 	_env = env
-	var f := GSWeatherSchedule.flash_at(doc, _time, camera_pos)
-	var level: float = f["level"] * config.flash_scale
+	var slot := GSWeatherSchedule.brightest_slot(doc, _time, camera_pos)
+	var level := 0.0
+	if slot >= 0:
+		level = GSWeatherSchedule.slot_level(doc, slot, _time, camera_pos) * config.flash_scale
 	_flash_level = level
 	if level <= 0.0:
 		_end_flash()
 		return
 	if not _flashing:
 		_flashing = true
-		_flash_base = {"bg": env.background_energy_multiplier, "amb": env.ambient_light_energy}
-	env.background_energy_multiplier = _flash_base["bg"] + level * doc.flash_sky
-	env.ambient_light_energy = _flash_base["amb"] + level * doc.flash_ambient
-	_draw_bolt(f["strike"], camera_pos, level)
+		_flash_base_bg = env.background_energy_multiplier
+		_flash_base_amb = env.ambient_light_energy
+	env.background_energy_multiplier = _flash_base_bg + level * doc.flash_sky
+	env.ambient_light_energy = _flash_base_amb + level * doc.flash_ambient
+	_draw_bolt(slot, camera_pos, level)
 
 
 func _end_flash() -> void:
 	_flash_level = 0.0
 	if _flashing and _env != null:
-		_env.background_energy_multiplier = _flash_base["bg"]
-		_env.ambient_light_energy = _flash_base["amb"]
+		_env.background_energy_multiplier = _flash_base_bg
+		_env.ambient_light_energy = _flash_base_amb
 	_flashing = false
 	if _bolt != null:
 		_bolt.visible = false
 	_bolt_slot = -1
 
 
-func _draw_bolt(st: Dictionary, camera_pos: Vector3, level: float) -> void:
-	if not doc.bolt or config.quality < Quality.HIGH or not can_render() or st.is_empty():
+func _draw_bolt(slot: int, camera_pos: Vector3, level: float) -> void:
+	if not doc.bolt or config.quality < Quality.HIGH or not can_render() or slot < 0:
 		return
 	if _bolt == null:
 		_bolt = MeshInstance3D.new()
@@ -381,8 +400,9 @@ func _draw_bolt(st: Dictionary, camera_pos: Vector3, level: float) -> void:
 		add_child(_bolt)
 	var mat2 := _bolt.material_override as StandardMaterial3D
 	mat2.albedo_color.a = clampf(level * 1.4, 0.0, 1.0)
-	if _bolt_slot != int(st["slot"]):
-		_bolt_slot = int(st["slot"])
+	if _bolt_slot != slot:
+		_bolt_slot = slot
+		var st := GSWeatherSchedule.strike(doc, slot)
 		var ground: Vector3 = st["position"]
 		var top := ground + Vector3.UP * doc.thunder_height
 		var metres := camera_pos.distance_to(ground)
