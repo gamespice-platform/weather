@@ -2,6 +2,8 @@
 
 Everyday weather for Godot games: snow, rain, thunderstorms, wind and fog, described per map as a document, so any game gets them by adding a node.
 
+A GameSpice addon, MIT, built with Claude Code. `examples/weather_selftest.tscn` is the headless test and `examples/weather_demo.tscn` shows it. A few games in [Zee's Games](https://zeesgames.com) put weather on their maps with it, on live servers built from GameSpice addons. Bug reports go to the [issue tracker](https://github.com/gamespice-platform/weather/issues).
+
 ## Install
 
 1. Get [Godot 4.7](https://godotengine.org/download).
@@ -62,8 +64,16 @@ To keep to the guidance of no more than three general flashes per second, by def
 
 Run `examples/weather_demo.tscn` (add `-- --mode rain`; keys 1 to 4 switch snow, rain, fog and flash) to see it, and `examples/weather_selftest.tscn` headless with Godot for the tests.
 
-## Status and licence
+## Used by
 
-Part of the [**GameSpice**](https://gamespice.net) platform: a family of Godot addons. Written with Claude Code and maintained by `gamemann`. Every addon has headless tests, but little of this has been played by real users yet, so expect rough edges and please [open an issue](https://github.com/gamespice-platform/weather/issues) when you hit one.
+These games from Zee's Games vendor this addon:
+
+- [Murder Mystery](https://zeesgames.com/murder-mystery) - per-map weather documents
+- [Wipeout](https://zeesgames.com/wipeout) - the weather view over the course
+- [Dangerous Delivery](https://zeesgames.com/dangerous-delivery) - weather documents and the client weather state
+
+The whole collection is at [zeesgames.com](https://zeesgames.com).
+
+## Licence
 
 MIT licence, see [LICENSE](LICENSE). The only closed part of the [**GameSpice**](https://gamespice.net) platform is the web back end; you can use your own instead of GameSpice's.
